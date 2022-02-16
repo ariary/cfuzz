@@ -13,7 +13,7 @@ The same thing as [`wfuzz`](https://github.com/xmendez/wfuzz) **but for command 
 
 Indicate the command containing the fuzzing part with the kyword `FUZZ`, the wordlist and let's get it:
 ```shell
-export CFUZZ_CMD="printf "FUZZ" | sudo -S id" # Example bruteforcing sudo password, I haven't found better
+export CFUZZ_CMD="printf FUZZ | sudo -S id" # Example bruteforcing sudo password, I haven't found better
 cfuzz -w [wordlist]
 ```
 
