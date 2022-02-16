@@ -19,9 +19,9 @@ echo $CMD | cfuzz -w [wordlist]
 
 ### Filter result
 
-#### By command output**
+#### By command output
 
-#### By command execution time**
+#### By command execution time
 
 ### Configure
 
