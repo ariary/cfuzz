@@ -13,8 +13,8 @@ The same thing as [`wfuzz`](https://github.com/xmendez/wfuzz) **but for command 
 
 Indicate the command containing the fuzzing part with the kyword `FUZZ`, the wordlist and let's get it:
 ```shell
-CMD="echo FUZZ" # Example with echo command, I haven't found better
-echo $CMD | cfuzz -w [wordlist]
+export CFUZZ_CMD="echo FUZZ" # Example with echo command, I haven't found better
+cfuzz -w [wordlist]
 ```
 
 ### Filter result
