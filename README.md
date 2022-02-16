@@ -1,7 +1,7 @@
 # cfuzz
 
 <div align=center>
-<img src= https://github.com/ariary/cfuzz/blob/main/img/cfuzz-logo.png width=150>
+<img src= https://github.com/ariary/cfuzz/blob/main/img/CF-logo.png width=150>
 </div>
 <br>
 
@@ -11,7 +11,7 @@ The same thing as [`wfuzz`](https://github.com/xmendez/wfuzz) **but for command 
 
 ## Usage
 
-Indicate the command containing the fuzzing part with the kyword `FUZZ`, the wordlist and let's get it:
+Indicate the command containing the fuzzing part with the keyword `FUZZ`, the wordlist and let's get it:
 ```shell
 export CFUZZ_CMD="printf FUZZ | sudo -S id" # Example bruteforcing sudo password, I haven't found better
 cfuzz -w [wordlist]
