@@ -105,7 +105,11 @@ func Exec(cfg config.Config, wg *sync.WaitGroup, substituteStr string) {
 
 // PrintExec: Print execution result according to configuration and filter
 func PrintExec(cfg config.Config, result ExecResult) {
-	//word counter
-	filteredData := strconv.Itoa(len(result.Stdout))
-	output.Printline(result.Substitute, filteredData)
+	switch cfg.FilterType {
+	case config.Output:
+		//word counter
+		filteredData := strconv.Itoa(len(result.Stdout))
+		output.Printline(result.Substitute, filteredData)
+	}
+
 }
