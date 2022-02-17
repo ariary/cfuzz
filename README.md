@@ -25,9 +25,17 @@ export CFUZZ_CMD="printf FUZZ | sudo -S id" # Example bruteforcing sudo password
 cfuzz -w [wordlist]
 ```
 
+Or in one line:
+```Shell
+# example for subdomain enum
+cfuzz -w [wordlist] -t 5 ping -c 4 FUZZ.domain.net
+```
+
 ### Filter result
 
 #### By command output
+
+Use the subcommand `output` and 
 
 #### By command return code
 
@@ -35,6 +43,6 @@ cfuzz -w [wordlist]
 
 ### Configure
 
-#### Command input
-
-#### `cfuzz` run
+* Command input
+* Timeout 
+* Delay
