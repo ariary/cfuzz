@@ -31,18 +31,39 @@ Or in one line:
 cfuzz -w [wordlist] -t 5 ping -c 4 FUZZ.domain.net
 ```
 
+Also, fuzzing  command `stdin` is possible by adding `--stdin-fuzzing [INPUT_WITH_FUZZ_KEYWORD]`
+
 ### Filter result
+
+Choose an execution element to monitor and apply display filter accordingly
 
 #### By command output
 
-Use the subcommand `output` and 
+Use the subcommand `output` to display result regarding output characteristic and select the display mode:
+* *Character number in stdout* (default) with `-c` , `--stdout` 
+* *Character number in stderr* with `-ce`, `--stderr`
+
+Additionnaly you can apply filter:
+* *Display only entry with more than n characters*: `--min n` (Conversely `--max`)
+* *Display only entry with exactly n characters*: `-c n` (or `-ce n`)
 
 #### By command return code
 
+Use the subcommand `code` to display result regarding exit code of command execution.
+
+Additionnaly you can apply filter:
+* *Display only entry with 0 exit code*: `--success` (Conversely `--failure`)
+
 #### By command execution time
+
+Use the subcommand `time` to display result regarding time execution of command.
+
+Additionnaly you can apply filter:
+* *Display only entry with more an exectuion time greater than n second*: `--min n` (Conversely `--max`)
+* *Display only entry with exactly n seconds*: `-t n`
 
 ### Configure
 
-* Command input
-* Timeout 
-* Delay
+* Command input (`-i`, `--input`), to fuzz in stdin use `--stdin-fuzzing` 
+* Timeout for command execution process (`-t`, `--timeout`)
+* Delay  between each command execution (`-d`, `--delay`)
