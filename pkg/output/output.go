@@ -2,6 +2,8 @@ package output
 
 import (
 	"fmt"
+	"os"
+	"text/tabwriter"
 
 	"github.com/ariary/cfuzz/pkg/config"
 )
@@ -35,5 +37,13 @@ func PrintConfig(cfg config.Config) {
 
 // Nice printing of a line containing 2 eement the value and the data
 func Printline(value string, data string) {
-	fmt.Println(value, "\t\t", data)
+	w := new(tabwriter.Writer)
+
+	// minwidth, tabwidth, padding, padchar, flags
+	w.Init(os.Stdout, 40, 8, 0, '\t', 0)
+
+	defer w.Flush()
+
+	fmt.Fprintf(w, "%s\t%s\n", value, data)
+
 }

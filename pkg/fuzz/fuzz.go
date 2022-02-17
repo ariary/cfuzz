@@ -2,6 +2,7 @@ package fuzz
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"log"
 	"os"
@@ -20,7 +21,7 @@ type ExecResult struct {
 	Stdout     string
 	Stderr     string
 	Time       time.Duration
-	Code       int
+	Code       string
 	Error      error
 	Timeout    bool
 }
@@ -47,8 +48,6 @@ func PerformFuzzing(cfg config.Config) {
 		wg.Add(1)
 		substituteStr := scanner.Text()
 
-		// channel results & on affiche les resultats petit à petit
-
 		go Exec(cfg, &wg, substituteStr)
 	}
 
@@ -59,40 +58,48 @@ func PerformFuzzing(cfg config.Config) {
 	}
 }
 
-// Exec: exec the new command and print result accordingly
+// Exec: exec the new command and lsend result to print function
 // Thanks to https://medium.com/@vCabbage/go-timeout-commands-with-os-exec-commandcontext-ba0c861ed738 for execution timeout
 func Exec(cfg config.Config, wg *sync.WaitGroup, substituteStr string) {
 	defer wg.Done()
 	nCommand := strings.Replace(cfg.Command, cfg.Keyword, substituteStr, 1) //> 0, all replace
 
 	// Create a new context and add a timeout to it
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.Timeout)*time.Second)
+	timeout := time.Duration(cfg.Timeout) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel() // The cancel should be deferred so resources are cleaned up
+
+	// Create the command with our context
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, cfg.Shell, "-c", nCommand)
-	result := ExecResult{Substitute: substituteStr}
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 
+	// run
 	start := time.Now()
-	output, err := cmd.Output()
-
-	if ctx.Err() == context.DeadlineExceeded {
-		result.Timeout = true
-		result.Stdout = string(output)
-		result.Time = time.Duration(cfg.Timeout) * time.Second
-		PrintExec(cfg, result)
-		return
-	}
+	err := cmd.Run()
 	elapsed := time.Since(start)
 
-	if err != nil {
-		// Non-zero exit code
-		//TO DO find a way to find the value
-		result.Code = 1
+	result := ExecResult{Substitute: substituteStr}
+	if ctx.Err() == context.DeadlineExceeded {
+		result.Timeout = true
+		result.Time = timeout
 	} else {
-		result.Code = 0
+		result.Timeout = false
+		result.Time = elapsed
 	}
 
-	result.Stdout = string(output)
-	result.Time = elapsed
+	result.Stdout = stdout.String()
+	result.Stderr = stderr.String()
+
+	if err != nil {
+		result.Error = err
+		result.Code = err.Error() //killed, 2, etc
+	} else {
+		result.Code = "0"
+	}
+
 	PrintExec(cfg, result)
 }
 
