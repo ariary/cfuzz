@@ -6,7 +6,7 @@ import (
 	"github.com/ariary/cfuzz/pkg/config"
 )
 
-//Print the banner as it is trendy for this kind of tool. thanks to: https://patorjk.com/software/taag
+//BAnner: Print the banner as it is trendy for this kind of tool. thanks to: https://patorjk.com/software/taag
 func Banner() {
 	banner := `
                  _/_/                                
@@ -20,6 +20,7 @@ _/          _/      _/    _/    _/        _/
 	fmt.Println()
 }
 
+// PrintConfig: print configuration of cfuzz running
 func PrintConfig(cfg config.Config) {
 	line := `[*] ----------------------~~~~~~~~~~~~~~~~~~~---------------------- [*]`
 	fmt.Println(line)
@@ -30,4 +31,9 @@ func PrintConfig(cfg config.Config) {
 	fmt.Println()
 	fmt.Println(line)
 	fmt.Println()
+}
+
+// Nice printing of a line containing 2 eement the value and the data
+func Printline(value string, data string) {
+	fmt.Println(value, "\t\t", data)
 }

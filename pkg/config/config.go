@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"os"
 	"strings"
 )
@@ -23,7 +24,7 @@ func (f Filter) String() string {
 	case Time:
 		return "time"
 	case ReturnCode:
-		return "return code"
+		return "return"
 	}
 	return "unknown"
 }
@@ -33,7 +34,21 @@ type Config struct {
 	Keyword          string
 	Command          string
 	FilterType       Filter
+	RoutineDelay     int64
+	Shell            string
+	Timeout          int64
 }
+
+var usage = `Usage of cfuzz: cfuzz [flags values] [command] or cfuzz [flags values] [command] with CFUZZ_CMD environment variable set
+Fuzz command line execution and filter results
+  -w, --wordlist     wordlist used by fuzzer
+  -f, --filter	     filter type to sort execution results (among 'output','time','return')
+  -d, --delay        delay in ms between each thread launching. A thread execute the command. (default: 0)
+  -k, --keyword      keyword use to determine which zone to fuzz (default: FUZZ)
+  -s, --shell        shell to use for execution (default: /bin/bash)
+  -t, --timeout      command execution timeout in s. After reaching it the command is killed. (default: 30)
+  -h, --help         prints help information 
+`
 
 // NewConfig create Config instance
 func NewConfig() Config {
@@ -43,6 +58,14 @@ func NewConfig() Config {
 	//flag wordlist
 	flag.StringVar(&config.WordlistFilename, "wordlist", "", "wordlist used by fuzzer")
 	flag.StringVar(&config.WordlistFilename, "w", "", "wordlist used by fuzzer")
+
+	//flag keyword
+	flag.StringVar(&config.Keyword, "keyword", "FUZZ", "keyword use to determine which zone to fuzz")
+	flag.StringVar(&config.Keyword, "k", "FUZZ", "keyword use to determine which zone to fuzz")
+
+	//flag shell
+	flag.StringVar(&config.Shell, "shell", "/bin/bash", "shell to use for execution")
+	flag.StringVar(&config.Shell, "s", "/bin/bash", "shell to use for execution")
 
 	//flag filter
 	var filter string
@@ -57,6 +80,15 @@ func NewConfig() Config {
 		config.FilterType = ReturnCode
 	} //default: if unreadable keep output
 
+	//flag RoutineDelay
+	flag.Int64Var(&config.RoutineDelay, "d", 0, "delay in ms between each thread launching. A thread execute the command. (default: 0)")
+	flag.Int64Var(&config.RoutineDelay, "delay", 0, "delay in ms between each thread launching. A thread execute the command. (default: 0)")
+
+	//flag timeout
+	flag.Int64Var(&config.Timeout, "t", 30, "Command execution timeout in s. After reaching it the command is killed. (default: 30)")
+	flag.Int64Var(&config.Timeout, "timeout", 30, "Command execution timeout in s. After reaching it the command is killed. (default: 30)")
+
+	flag.Usage = func() { fmt.Print(usage) }
 	flag.Parse()
 
 	// command
