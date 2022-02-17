@@ -7,21 +7,55 @@ import (
 	"strings"
 )
 
+// Filter: type of filter apply to cfuzz result
+type Filter int64
+
+const (
+	Output Filter = iota //Output is the default hence
+	Time
+	ReturnCode
+)
+
+func (f Filter) String() string {
+	switch f {
+	case Output:
+		return "output"
+	case Time:
+		return "time"
+	case ReturnCode:
+		return "returnCode"
+	}
+	return "unknown"
+}
+
 type Config struct {
 	WordlistFilename string
 	Keyword          string
 	Command          string
+	FilterType       Filter
 }
 
 // NewConfig create Config instance
 func NewConfig() Config {
 	// default value
-	config := Config{Keyword: "FUZZ"}
+	config := Config{Keyword: "FUZZ", FilterType: Output} //FilterType is already by default Output but to keep it in mind
 
-	//flag value
+	//flag wordlist
 	flag.StringVar(&config.WordlistFilename, "wordlist", "", "wordlist used by fuzzer")
 	flag.StringVar(&config.WordlistFilename, "w", "", "wordlist used by fuzzer")
 
+	//flag filter
+	var filter string
+	flag.StringVar(&filter, "f", "output", "filter type to sort execution results")
+	flag.StringVar(&filter, "filter", "output", "filter type to sort execution results")
+	switch filter {
+	case Output.String():
+		config.FilterType = Output
+	case Time.String():
+		config.FilterType = Time
+	case ReturnCode.String():
+		config.FilterType = ReturnCode
+	} //default: if unreadable keep output
 	flag.Parse()
 
 	config.Command = os.Getenv("CFUZZ_CMD")

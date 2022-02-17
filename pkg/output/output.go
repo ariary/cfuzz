@@ -26,6 +26,8 @@ func PrintConfig(cfg config.Config) {
 	fmt.Println()
 	fmt.Println("command fuzzed:\t\t", cfg.Command)
 	fmt.Println("wordlist:\t\t", cfg.WordlistFilename)
+	fmt.Println("filtyer type:\t\t", cfg.FilterType.String())
 	fmt.Println()
 	fmt.Println(line)
+	fmt.Println()
 }
