@@ -2,12 +2,13 @@
 
 <div align=center>
 <img src= https://github.com/ariary/cfuzz/blob/main/img/CF-logo.png width=300>
-</div>
+
 <br>
 
 
 The same thing as [`wfuzz`](https://github.com/xmendez/wfuzz) **but for command line fuzzing. This enables to fuzz command line execution and filter results.**
 <br>*Also a good friend for bruteforcing*
+</div>
 
 **Why?**<br>
 To perform fuzzing or bruteforcing we have plenty of awesome tools ([`fuff`](https://github.com/ffuf/ffuf) and [`wfuzz`](https://github.com/xmendez/wfuzz) for web fuzzing, [`hydra`](https://github.com/vanhauser-thc/thc-hydra) for network bruteforcing, to mention just a few). **`cfuzz`** is a tool that propose a different approach with a step-back. **The aim is to be able to fuzz/bruteforce anything that can be  transcribed in command line**.
