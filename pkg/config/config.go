@@ -8,35 +8,17 @@ import (
 	"strings"
 )
 
-// Filter: type of filter apply to cfuzz result
-type Filter int64
-
-const (
-	Output Filter = iota //Output is the default hence
-	Time
-	ReturnCode
-)
-
-func (f Filter) String() string {
-	switch f {
-	case Output:
-		return "output"
-	case Time:
-		return "time"
-	case ReturnCode:
-		return "return"
-	}
-	return "unknown"
-}
-
 type Config struct {
 	WordlistFilename string
 	Keyword          string
 	Command          string
-	FilterType       Filter
 	RoutineDelay     int64
 	Shell            string
 	Timeout          int64
+	DisplayModes     []Mode
+	OutputFilters    []OutputFilter
+	TimeFilters      []TimeFilter
+	CodeFilters      []CodeFilter
 }
 
 var usage = `Usage of cfuzz: cfuzz [flags values] [command] or cfuzz [flags values] [command] with CFUZZ_CMD environment variable set
@@ -53,7 +35,7 @@ Fuzz command line execution and filter results
 // NewConfig create Config instance
 func NewConfig() Config {
 	// default value
-	config := Config{Keyword: "FUZZ", FilterType: Output} //FilterType is already by default Output but to keep it in mind
+	config := Config{Keyword: "FUZZ"} //FilterType is already by default Output but to keep it in mind
 
 	//flag wordlist
 	flag.StringVar(&config.WordlistFilename, "wordlist", "", "wordlist used by fuzzer")
@@ -67,18 +49,41 @@ func NewConfig() Config {
 	flag.StringVar(&config.Shell, "shell", "/bin/bash", "shell to use for execution")
 	flag.StringVar(&config.Shell, "s", "/bin/bash", "shell to use for execution")
 
-	//flag filter
-	var filter string
-	flag.StringVar(&filter, "f", "output", "filter type to sort execution results")
-	flag.StringVar(&filter, "filter", "output", "filter type to sort execution results")
-	switch filter {
-	case Output.String():
-		config.FilterType = Output
-	case Time.String():
-		config.FilterType = Time
-	case ReturnCode.String():
-		config.FilterType = ReturnCode
-	} //default: if unreadable keep output
+	// display mode: output
+	var outputCharacter, outputCharacterErr string
+	var outputMin, outputMax int
+	flag.StringVar(&outputCharacter, "oc", "", "display execution command number of characters in stdout. If value is provided, it displays only command with exactly the same value number of charcater in stdout")
+	flag.StringVar(&outputCharacterErr, "oce", "", "display execution command number of characters in stderr. If value is provided, it displays only command with exactly the same value number of charcater in stderr")
+	// output filter
+	flag.IntVar(&outputMin, "cmin", 0, "display command with a minimum number of characters in stdout")
+	flag.IntVar(&outputMax, "cmax", 0, "display command with a maximum number of characters in stdout")
+
+	// display mode: exit code
+	var exitCode string
+	var failure bool
+	flag.StringVar(&exitCode, "e", "", "display command exit code. If value is provided, it displays only command with the exit code")
+	// output filter
+	flag.BoolVar(&failure, "failure", false, "display only commands with exit code different of 0")
+
+	// display mode: time
+	var time int
+	var timeMin, timeMax int
+	flag.IntVar(&time, "t", 0, "display command time execution. If value is provided, it displays only command with the same value time execution (+/-1s)")
+	// time filter
+	flag.IntVar(&timeMin, "tmin", 0, "display command with a minimum execution time")
+	flag.IntVar(&timeMax, "tmax", 0, "display command with a maximum execution time")
+
+	// var filter string
+	// flag.StringVar(&filter, "f", "output", "filter type to sort execution results")
+	// flag.StringVar(&filter, "filter", "output", "filter type to sort execution results")
+	// switch filter {
+	// case Output.String():
+	// 	config.FilterType = Output
+	// case Time.String():
+	// 	config.FilterType = Time
+	// case ReturnCode.String():
+	// 	config.FilterType = ReturnCode
+	// } //default: if unreadable keep output
 
 	//flag RoutineDelay
 	flag.Int64Var(&config.RoutineDelay, "d", 0, "delay in ms between each thread launching. A thread execute the command. (default: 0)")
@@ -98,6 +103,17 @@ func NewConfig() Config {
 		cmdArg := strings.Join(flag.Args(), " ")
 		config.Command = cmdArg
 	}
+
+	// parse display mode
+	modes := parseDisplayMode()
+	if len(modes) > 0 {
+		config.DisplayModes = modes
+	} else {
+		config.DisplayModes = []Mode{Stdout}
+	}
+
+	// parse filters
+	parseFilters(&config)
 
 	return config
 }
@@ -122,4 +138,25 @@ func (c *Config) CheckConfig() error {
 	}
 
 	return nil
+}
+
+//isFlagPassed: determine if flag is provided even with empty value
+func isFlagPassed(name string) bool {
+	found := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			found = true
+		}
+	})
+	return found
+}
+
+// parseDisplayMode: parse all flags and determine the display modes chosen
+func parseDisplayMode() (modes []Mode) {
+	return modes
+}
+
+// parseFilters: parse all flags and determine the filters
+func parseFilters(cfg *Config) {
+
 }
