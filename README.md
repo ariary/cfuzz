@@ -15,7 +15,7 @@ To perform fuzzing or bruteforcing we have plenty of awesome tools ([`fuff`](htt
 
 Consequently, `cfuzz` can be seen either as an alternative of these tools for simple use case or an extension cause it handles a huge range of use case
 
-*Idea origin: when bruteforcing ipmi service to enumerate users. 3 options: use `msfconsole`, write module to `hydra`, manually or programmaticaly parse `ipmitool` tool output*
+*Idea origin: when bruteforcing ipmi service to enumerate users. 3 options: use `msfconsole`, write module for `hydra`, manually or programmaticaly parse `ipmitool` tool output*
 
 ## Usage
 
@@ -31,7 +31,7 @@ Or in one line:
 cfuzz -w [wordlist] -t 5 ping -c 4 FUZZ.domain.net
 ```
 
-Also, fuzzing  command `stdin` is possible by adding `--stdin-fuzzing [INPUT_WITH_FUZZ_KEYWORD]`
+Also, fuzzing  command `stdin` is possible by adding `--stdin-fuzzing [INPUT_WITH_CFUZZ_KEYWORD]`
 
 ### Filter result
 
@@ -67,3 +67,4 @@ Additionnaly you can apply filter:
 * Command input (`-i`, `--input`), to fuzz in stdin use `--stdin-fuzzing` 
 * Timeout for command execution process (`-t`, `--timeout`)
 * Delay  between each command execution (`-d`, `--delay`)
+* Change `cfuzz` Keyword (`-k`, `--keyword`)
