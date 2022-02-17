@@ -10,7 +10,9 @@ import (
 )
 
 func main() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile) //set default logger
+	//log.SetFlags(log.Lshortfile) //set default logger
+	log.SetFlags(0)
+
 	// config & banner
 	cfg := config.NewConfig()
 

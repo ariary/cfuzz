@@ -23,7 +23,7 @@ func (f Filter) String() string {
 	case Time:
 		return "time"
 	case ReturnCode:
-		return "returnCode"
+		return "return code"
 	}
 	return "unknown"
 }
@@ -56,9 +56,16 @@ func NewConfig() Config {
 	case ReturnCode.String():
 		config.FilterType = ReturnCode
 	} //default: if unreadable keep output
+
 	flag.Parse()
 
-	config.Command = os.Getenv("CFUZZ_CMD")
+	// command
+	if cmdEnv := os.Getenv("CFUZZ_CMD"); cmdEnv != "" {
+		config.Command = cmdEnv
+	} else if flag.NArg() > 0 {
+		cmdArg := strings.Join(flag.Args(), " ")
+		config.Command = cmdArg
+	}
 
 	return config
 }
@@ -74,7 +81,7 @@ func (c *Config) CheckConfig() error {
 		return errors.New("Fuzzing Keyword can't be empty string")
 	}
 	if c.Command == "" {
-		return errors.New("No command provided. Please indicate it using environment variable CFUZZ_CMD")
+		return errors.New("No command provided. Please indicate it using environment variable CFUZZ_CMD or cfuzz [flag:value] [command]")
 	}
 
 	// check field consistency
