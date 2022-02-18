@@ -22,12 +22,19 @@ _/          _/      _/    _/    _/        _/
 
 // PrintConfig: print configuration of cfuzz running
 func PrintConfig(cfg Config) {
+	allFilters := ""
+	for i := 0; i < len(cfg.Filters); i++ {
+		allFilters += cfg.Filters[i].Name() + ", "
+	}
 	line := `[*] ----------------------~~~~~~~~~~~~~~~~~~~---------------------- [*]`
 	fmt.Println(line)
 	fmt.Println()
-	fmt.Println("command fuzzed:\t\t", cfg.Command)
-	fmt.Println("wordlist:\t\t", cfg.WordlistFilename)
-	//fmt.Println("filtyer type:\t\t", cfg.FilterType.String())
+	Printline("command fuzzed", cfg.Command)
+	Printline("wordlist:", cfg.WordlistFilename)
+	if allFilters != "" {
+		allFilters = allFilters[:len(allFilters)-2] //delete last comma
+		Printline("filters:", allFilters)
+	}
 	fmt.Println()
 	fmt.Println(line)
 	fmt.Println()
