@@ -8,6 +8,7 @@ import (
 // DisplayMode: interface use to determine field to display in cfuzz output
 type DisplayMode interface {
 	DisplayString(result ExecResult) string
+	Name() string
 }
 
 // StdoutDisplay: display mode that displays field concerning stdout
@@ -20,6 +21,10 @@ func (stdout StdoutDisplay) DisplayString(result ExecResult) string {
 	return strconv.Itoa(nbChar)
 }
 
+func (stdout StdoutDisplay) Name() string {
+	return "stdout characters number"
+}
+
 // StderrDisplay: display mode that displays field concerning stderr
 type StderrDisplay struct {
 }
@@ -28,6 +33,10 @@ type StderrDisplay struct {
 func (stderr StderrDisplay) DisplayString(result ExecResult) string {
 	nbChar := len(result.Stderr)
 	return strconv.Itoa(nbChar)
+}
+
+func (stderr StderrDisplay) Name() string {
+	return "stderr characters number"
 }
 
 // TimeDisplay: display mode that displays field concerning stderr
@@ -48,6 +57,10 @@ func (time TimeDisplay) DisplayString(result ExecResult) string {
 	return timeExecution
 }
 
+func (time TimeDisplay) Name() string {
+	return "execution time"
+}
+
 // CodeDisplay: display mode that displays field concerning exit code of command exectuion
 type CodeDisplay struct {
 }
@@ -56,4 +69,8 @@ type CodeDisplay struct {
 func (code CodeDisplay) DisplayString(result ExecResult) string {
 	exitCode := result.Code
 	return exitCode
+}
+
+func (code CodeDisplay) Name() string {
+	return "exit code"
 }

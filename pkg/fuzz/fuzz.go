@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -102,11 +101,21 @@ func Exec(cfg Config, wg *sync.WaitGroup, substituteStr string) {
 
 // PrintExec: Print execution result according to configuration and filter
 func PrintExec(cfg Config, result ExecResult) {
-	// switch cfg.FilterType {
-	// case config.Output:
-	//word counter
-	filteredData := strconv.Itoa(len(result.Stdout))
-	Printline(result.Substitute, filteredData)
+	// filter
+	for i := 0; i < len(cfg.Filters); i++ {
+		if !cfg.Filters[i].IsOk(result) {
+			return //don't display it
+		}
+	}
+	// display
+	var fields []string
+	for i := 0; i < len(cfg.DisplayModes); i++ {
+		fields = append(fields, cfg.DisplayModes[i].DisplayString(result))
+	}
+	PrintLine(result.Substitute, fields...)
+
+	// filteredData := strconv.Itoa(len(result.Stdout))
+	// PrintLine(result.Substitute, filteredData)
 	// }
 
 }

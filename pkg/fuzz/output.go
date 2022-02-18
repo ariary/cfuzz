@@ -22,33 +22,48 @@ _/          _/      _/    _/    _/        _/
 
 // PrintConfig: print configuration of cfuzz running
 func PrintConfig(cfg Config) {
+	// filters
 	allFilters := ""
 	for i := 0; i < len(cfg.Filters); i++ {
 		allFilters += cfg.Filters[i].Name() + ", "
 	}
+
+	allDisplayModes := ""
+	for i := 0; i < len(cfg.DisplayModes); i++ {
+		allDisplayModes += cfg.DisplayModes[i].Name() + ", "
+	}
+
 	line := `[*] ----------------------~~~~~~~~~~~~~~~~~~~---------------------- [*]`
 	fmt.Println(line)
 	fmt.Println()
-	Printline("command fuzzed", cfg.Command)
-	Printline("wordlist:", cfg.WordlistFilename)
+	PrintLine("command fuzzed", cfg.Command)
+	PrintLine("wordlist:", cfg.WordlistFilename)
+	if allDisplayModes != "" {
+		allDisplayModes = allDisplayModes[:len(allDisplayModes)-2] //delete last comma
+		PrintLine("columns:", allDisplayModes)
+	}
 	if allFilters != "" {
 		allFilters = allFilters[:len(allFilters)-2] //delete last comma
-		Printline("filters:", allFilters)
+		PrintLine("filters:", allFilters)
 	}
 	fmt.Println()
 	fmt.Println(line)
 	fmt.Println()
 }
 
-// Nice printing of a line containing 2 eement the value and the data
-func Printline(value string, data string) {
+// Nice printing of a line containing 2 or more elements
+func PrintLine(value string, element ...string) {
 	w := new(tabwriter.Writer)
 
 	// minwidth, tabwidth, padding, padchar, flags
 	w.Init(os.Stdout, 40, 8, 0, '\t', 0)
 
 	defer w.Flush()
+	line := value
+	for i := 0; i < len(element); i++ {
+		line += "\t" + element[i]
+	}
 
-	fmt.Fprintf(w, "%s\t%s\n", value, data)
+	fmt.Fprintf(w, "%s\n", line)
 
 }
