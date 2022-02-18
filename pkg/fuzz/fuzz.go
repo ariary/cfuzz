@@ -60,6 +60,8 @@ func Exec(cfg Config, wg *sync.WaitGroup, substituteStr string) {
 	defer wg.Done()
 	nCommand := strings.Replace(cfg.Command, cfg.Keyword, substituteStr, 1) //> 0, all replace
 
+	input := strings.Replace(cfg.Input, cfg.Keyword, substituteStr, 1) //> 0, all replace
+
 	// Create a new context and add a timeout to it
 	timeout := time.Duration(cfg.Timeout) * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -73,7 +75,7 @@ func Exec(cfg Config, wg *sync.WaitGroup, substituteStr string) {
 	cmd.Stderr = &stderr
 
 	if cfg.Input != "" {
-		cmd.Stdin = strings.NewReader(cfg.Input)
+		cmd.Stdin = strings.NewReader(input)
 	}
 
 	// run

@@ -17,6 +17,7 @@ type Config struct {
 	Shell            string
 	Timeout          int64
 	Input            string
+	StdinFuzzing     bool
 	DisplayModes     []DisplayMode
 	Filters          []Filter
 }
@@ -30,7 +31,8 @@ CONFIGURATION
   -k, --keyword            keyword use to determine which zone to fuzz (default: FUZZ)
   -s, --shell              shell to use for execution (default: /bin/bash)
   -to, --timeout           command execution timeout in s. After reaching it the command is killed. (default: 30)
-  -i, --stdin-fuzzing      fuzz sdtin instead of command line
+  -i, --input              provide stdin
+  -if, --stdin-fuzzing      fuzz sdtin instead of command line
 
 DISPLAY
   -oc, --stdout              display stdout number of characters
@@ -90,6 +92,10 @@ func NewConfig() Config {
 	flag.StringVar(&config.Input, "input", "", "fuzz stdin")
 	flag.StringVar(&config.Input, "i", "", "fuzz stdin")
 
+	//flag stdin-fuzzing
+	flag.BoolVar(&config.StdinFuzzing, "stdin-fuzzing", false, "fuzz stdin")
+	flag.BoolVar(&config.StdinFuzzing, "if", false, "fuzz stdin")
+
 	// display mode
 	var stdoutDisplay bool
 	flag.BoolVar(&stdoutDisplay, "oc", false, "display command execution  number of characters in stdout.")
@@ -142,7 +148,9 @@ func (c *Config) CheckConfig() error {
 	}
 
 	// check field consistency
-	if !strings.Contains(c.Command, c.Keyword) {
+	if c.StdinFuzzing && !strings.Contains(c.Input, c.Keyword) {
+		return errors.New("Fuzzing keyword has not been found in stdin. keyword:" + c.Keyword + " command:" + c.Input)
+	} else if !strings.Contains(c.Command, c.Keyword) {
 		return errors.New("Fuzzing keyword has not been found in command. keyword:" + c.Keyword + " command:" + c.Command)
 	}
 
