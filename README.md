@@ -35,36 +35,36 @@ Also, fuzzing  command `stdin` is possible by adding `--stdin-fuzzing [INPUT_WIT
 
 ### Filter result
 
-Choose an execution element to monitor and apply display filter accordingly
+Choose an execution element to display and add filters to select specific execution characteristics
 
 #### By command output
 
-Use the subcommand `output` to display result regarding output characteristic and select the display mode:
-* *Character number in stdout* (default) with `-c` , `--stdout` 
-* *Character number in stderr* with `-ce`, `--stderr`
+Use the flag `-oc`  to display stdout number of character, `-ec` for stderr
 
 Additionnaly you can apply filter:
-* *Display only entry with more than n characters*: `--min n` (Conversely `--max`)
-* *Display only entry with exactly n characters*: `-c n` (or `-ce n`)
+* *Display only entry with more than n characters*: `--omin n` (Conversely `--omax`)
+* *Display only entry with exactly n characters*: `--oeq n`
+
+For stder flag replace `o` by `e`
 
 #### By command return code
 
-Use the subcommand `code` to display result regarding exit code of command execution.
+Use the flag `-c` to display result regarding exit code of command execution.
 
 Additionnaly you can apply filter:
 * *Display only entry with 0 exit code*: `--success` (Conversely `--failure`)
 
 #### By command execution time
 
-Use the subcommand `time` to display result regarding time execution of command.
+Use the flag `-t` to display result regarding time execution of command.
 
 Additionnaly you can apply filter:
-* *Display only entry with more an exectuion time greater than n second*: `--min n` (Conversely `--max`)
-* *Display only entry with exactly n seconds*: `-t n`
+* *Display only entry with more an exectuion time greater than n second*: `--tmin n` (Conversely `--tmax`)
+* *Display only entry with exactly n seconds*: `--teq n`
 
 ### Configure
 
 * Command input (`-i`, `--input`), to fuzz in stdin use `--stdin-fuzzing` 
-* Timeout for command execution process (`-t`, `--timeout`)
+* Timeout for command execution process (`-to`, `--timeout`)
 * Delay  between each command execution (`-d`, `--delay`)
 * Change `cfuzz` Keyword (`-k`, `--keyword`)
