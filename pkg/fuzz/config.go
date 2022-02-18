@@ -1,4 +1,4 @@
-package config
+package fuzz
 
 import (
 	"errors"
@@ -15,10 +15,10 @@ type Config struct {
 	RoutineDelay     int64
 	Shell            string
 	Timeout          int64
-	DisplayModes     []Mode
-	OutputFilters    []OutputFilter
-	TimeFilters      []TimeFilter
-	CodeFilters      []CodeFilter
+	DisplayModes     []DisplayMode
+	// OutputFilters    []display.OutputFilter
+	// TimeFilters      []TimeFilter
+	// CodeFilters      []CodeFilter
 }
 
 var usage = `Usage of cfuzz: cfuzz [flags values] [command] or cfuzz [flags values] [command] with CFUZZ_CMD environment variable set
@@ -68,7 +68,7 @@ func NewConfig() Config {
 	// display mode: time
 	var time int
 	var timeMin, timeMax int
-	flag.IntVar(&time, "t", 0, "display command time execution. If value is provided, it displays only command with the same value time execution (+/-1s)")
+	flag.IntVar(&time, "ti", 0, "display command time execution. If value is provided, it displays only command with the same value time execution (+/-1s)")
 	// time filter
 	flag.IntVar(&timeMin, "tmin", 0, "display command with a minimum execution time")
 	flag.IntVar(&timeMax, "tmax", 0, "display command with a maximum execution time")
@@ -105,11 +105,12 @@ func NewConfig() Config {
 	}
 
 	// parse display mode
-	modes := parseDisplayMode()
-	if len(modes) > 0 {
-		config.DisplayModes = modes
+	displays := parseDisplayMode()
+	if len(displays) > 0 {
+		config.DisplayModes = displays
 	} else {
-		config.DisplayModes = []Mode{Stdout}
+		stdoutDisplay := StdoutDisplay{}
+		config.DisplayModes = []DisplayMode{stdoutDisplay}
 	}
 
 	// parse filters
@@ -152,7 +153,7 @@ func isFlagPassed(name string) bool {
 }
 
 // parseDisplayMode: parse all flags and determine the display modes chosen
-func parseDisplayMode() (modes []Mode) {
+func parseDisplayMode() (modes []DisplayMode) {
 	return modes
 }
 

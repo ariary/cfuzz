@@ -3,10 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/ariary/cfuzz/pkg/config"
 	"github.com/ariary/cfuzz/pkg/fuzz"
-	"github.com/ariary/cfuzz/pkg/output"
-	//"pkg/output"
 )
 
 func main() {
@@ -14,10 +11,10 @@ func main() {
 	log.SetFlags(0)
 
 	// config & banner
-	cfg := config.NewConfig()
+	cfg := fuzz.NewConfig()
 
-	output.Banner()
-	output.PrintConfig(cfg)
+	fuzz.Banner()
+	fuzz.PrintConfig(cfg)
 
 	if err := cfg.CheckConfig(); err != nil {
 		log.Fatal(err)

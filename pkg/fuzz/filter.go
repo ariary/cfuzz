@@ -1,4 +1,4 @@
-package config
+package fuzz
 
 // OutputFilter: output filter
 type OutputFilter int64

@@ -11,9 +11,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/ariary/cfuzz/pkg/config"
-	"github.com/ariary/cfuzz/pkg/output"
 )
 
 type ExecResult struct {
@@ -32,7 +29,7 @@ type ExecResult struct {
 // }
 
 // PerformFuzzing: Exec specific crafted command for each wordlist file line read
-func PerformFuzzing(cfg config.Config) {
+func PerformFuzzing(cfg Config) {
 	// read wordlist
 	wordlist, err := os.Open(cfg.WordlistFilename)
 	if err != nil {
@@ -60,7 +57,7 @@ func PerformFuzzing(cfg config.Config) {
 
 // Exec: exec the new command and lsend result to print function
 // Thanks to https://medium.com/@vCabbage/go-timeout-commands-with-os-exec-commandcontext-ba0c861ed738 for execution timeout
-func Exec(cfg config.Config, wg *sync.WaitGroup, substituteStr string) {
+func Exec(cfg Config, wg *sync.WaitGroup, substituteStr string) {
 	defer wg.Done()
 	nCommand := strings.Replace(cfg.Command, cfg.Keyword, substituteStr, 1) //> 0, all replace
 
@@ -104,12 +101,12 @@ func Exec(cfg config.Config, wg *sync.WaitGroup, substituteStr string) {
 }
 
 // PrintExec: Print execution result according to configuration and filter
-func PrintExec(cfg config.Config, result ExecResult) {
+func PrintExec(cfg Config, result ExecResult) {
 	// switch cfg.FilterType {
 	// case config.Output:
 	//word counter
 	filteredData := strconv.Itoa(len(result.Stdout))
-	output.Printline(result.Substitute, filteredData)
+	Printline(result.Substitute, filteredData)
 	// }
 
 }

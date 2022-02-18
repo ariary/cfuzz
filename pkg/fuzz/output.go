@@ -1,11 +1,9 @@
-package output
+package fuzz
 
 import (
 	"fmt"
 	"os"
 	"text/tabwriter"
-
-	"github.com/ariary/cfuzz/pkg/config"
 )
 
 //BAnner: Print the banner as it is trendy for this kind of tool. thanks to: https://patorjk.com/software/taag
@@ -23,7 +21,7 @@ _/          _/      _/    _/    _/        _/
 }
 
 // PrintConfig: print configuration of cfuzz running
-func PrintConfig(cfg config.Config) {
+func PrintConfig(cfg Config) {
 	line := `[*] ----------------------~~~~~~~~~~~~~~~~~~~---------------------- [*]`
 	fmt.Println(line)
 	fmt.Println()
