@@ -16,6 +16,7 @@ type Config struct {
 	RoutineDelay     int64
 	Shell            string
 	Timeout          int64
+	Input            string
 	DisplayModes     []DisplayMode
 	Filters          []Filter
 }
@@ -32,30 +33,30 @@ CONFIGURATION
   -i, --stdin-fuzzing      fuzz sdtin instead of command line
 
 DISPLAY
- -oc, --stdout              display stdout number of characters
- -ec, --stderr              display stderr number of characters
- -t, --time                 display execution time
- -c, --code                 display exit code
+  -oc, --stdout              display stdout number of characters
+  -ec, --stderr              display stderr number of characters
+  -t, --time                 display execution time
+  -c, --code                 display exit code
 
 FILTER
  STDOUT:
- -omin,--stdout-min         filter to only display if stdout characters number is lesser than n
- -omax,--stdout-max         filter to only display if stdout characters number is greater than n
- -oeq, --stdout-equal       filter to only display if stdout characters number is equal to n
+  -omin,--stdout-min         filter to only display if stdout characters number is lesser than n
+  -omax,--stdout-max         filter to only display if stdout characters number is greater than n
+  -oeq, --stdout-equal       filter to only display if stdout characters number is equal to n
 
  STDERR:
- -emin,--stderr-min         filter to only display if stderr characters number is lesser than n
- -emax,--stderr-max         filter to only display if stderr characters number is greater than n
- -eeq, --stderr-equal       filter to only display if stderr characters number is equal to n
+  -emin,--stderr-min         filter to only display if stderr characters number is lesser than n
+  -emax,--stderr-max         filter to only display if stderr characters number is greater than n
+  -eeq, --stderr-equal       filter to only display if stderr characters number is equal to n
 
  TIME:
- -tmin,--time-min           filter to only display if exectuion time is shorter than n seconds
- -tmax,--time-max           filter to only display if exectuion time is longer than n seconds
- -teq, --time-equal         filter to only display if exectuion time is shorter than n seconds
+  -tmin,--time-min           filter to only display if exectuion time is shorter than n seconds
+  -tmax,--time-max           filter to only display if exectuion time is longer than n seconds
+  -teq, --time-equal         filter to only display if exectuion time is shorter than n seconds
 
  CODE:
- --success                  filter to only display if execution return a zero exit code
- --failure                  filter to only display if execution return a non-zero exit code
+  --success                  filter to only display if execution return a zero exit code
+  --failure                  filter to only display if execution return a non-zero exit code
 
   -h, --help         prints help information 
 `
@@ -84,6 +85,10 @@ func NewConfig() Config {
 	//flag timeout
 	flag.Int64Var(&config.Timeout, "to", 30, "Command execution timeout in s. After reaching it the command is killed. (default: 30)")
 	flag.Int64Var(&config.Timeout, "timeout", 30, "Command execution timeout in s. After reaching it the command is killed. (default: 30)")
+
+	//flag input
+	flag.StringVar(&config.Input, "input", "", "fuzz stdin")
+	flag.StringVar(&config.Input, "i", "", "fuzz stdin")
 
 	// display mode
 	var stdoutDisplay bool

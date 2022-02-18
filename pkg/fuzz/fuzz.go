@@ -72,6 +72,10 @@ func Exec(cfg Config, wg *sync.WaitGroup, substituteStr string) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
+	if cfg.Input != "" {
+		cmd.Stdin = strings.NewReader(cfg.Input)
+	}
+
 	// run
 	start := time.Now()
 	err := cmd.Run()
