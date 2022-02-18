@@ -18,19 +18,45 @@ type Config struct {
 	Timeout          int64
 	DisplayModes     []DisplayMode
 	Filters          []Filter
-	// OutputFilters    []display.OutputFilter
-	// TimeFilters      []TimeFilter
-	// CodeFilters      []CodeFilter
 }
 
 var usage = `Usage of cfuzz: cfuzz [flags values] [command] or cfuzz [flags values] [command] with CFUZZ_CMD environment variable set
 Fuzz command line execution and filter results
-  -w, --wordlist     wordlist used by fuzzer
-  -f, --filter	     filter type to sort execution results (among 'output','time','return')
-  -d, --delay        delay in ms between each thread launching. A thread execute the command. (default: 0)
-  -k, --keyword      keyword use to determine which zone to fuzz (default: FUZZ)
-  -s, --shell        shell to use for execution (default: /bin/bash)
-  -to, --timeout      command execution timeout in s. After reaching it the command is killed. (default: 30)
+
+CONFIGURATION
+  -w, --wordlist           wordlist used by fuzzer
+  -d, --delay              delay in ms between each thread launching. A thread execute the command. (default: 0)
+  -k, --keyword            keyword use to determine which zone to fuzz (default: FUZZ)
+  -s, --shell              shell to use for execution (default: /bin/bash)
+  -to, --timeout           command execution timeout in s. After reaching it the command is killed. (default: 30)
+  -i, --stdin-fuzzing      fuzz sdtin instead of command line
+
+DISPLAY
+ -oc, --stdout              display stdout number of characters
+ -ec, --stderr              display stderr number of characters
+ -t, --time                 display execution time
+ -c, --code                 display exit code
+
+FILTER
+ STDOUT:
+ -omin,--stdout-min         filter to only display if stdout characters number is lesser than n
+ -omax,--stdout-max         filter to only display if stdout characters number is greater than n
+ -oeq, --stdout-equal       filter to only display if stdout characters number is equal to n
+
+ STDERR:
+ -emin,--stderr-min         filter to only display if stderr characters number is lesser than n
+ -emax,--stderr-max         filter to only display if stderr characters number is greater than n
+ -eeq, --stderr-equal       filter to only display if stderr characters number is equal to n
+
+ TIME:
+ -tmin,--time-min           filter to only display if exectuion time is shorter than n seconds
+ -tmax,--time-max           filter to only display if exectuion time is longer than n seconds
+ -teq, --time-equal         filter to only display if exectuion time is shorter than n seconds
+
+ CODE:
+ --success                  filter to only display if execution return a zero exit code
+ --failure                  filter to only display if execution return a non-zero exit code
+
   -h, --help         prints help information 
 `
 
