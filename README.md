@@ -64,7 +64,8 @@ Additionnaly you can apply filter:
 
 ### Configure
 
-* Command input (`-i`, `--input`), to fuzz in stdin use `--stdin-fuzzing` 
 * Timeout for command execution process (`-to`, `--timeout`)
 * Delay  between each command execution (`-d`, `--delay`)
+* Command input (`-i`, `--input`), to fuzz in stdin use `--stdin-fuzzing`
+* Shell to use for execution (`-s`,`--shell`)
 * Change `cfuzz` Keyword (`-k`, `--keyword`)
