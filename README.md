@@ -45,7 +45,7 @@ Additionnaly you can apply filter:
 * *Display only entry with more than n characters*: `--omin n` (Conversely `--omax`)
 * *Display only entry with exactly n characters*: `--oeq n`
 
-For stder flag replace `o` by `e`
+For stderr flag replace `o` by `e`
 
 #### By command return code
 
