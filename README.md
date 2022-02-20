@@ -10,6 +10,7 @@ The same thing as [`wfuzz`](https://github.com/xmendez/wfuzz) **but for command 
 <br>*Also a good friend for bruteforcing*
   
 <strong><code>{ <a href="#install">Install it</a> ; <a href="#usage">Use it</a> } </code></strong>
+
 </div>
 
 **Why?**<br>
@@ -18,6 +19,15 @@ To perform fuzzing or bruteforcing we have plenty of awesome tools ([`fuff`](htt
 Consequently, `cfuzz` can be seen either as an alternative of these tools for simple use case or an extension cause it handles a huge range of use cases
 
 <sub>*Origins of the idea: when bruteforcing ipmi service to enumerate users. 3 options: use `msfconsole`, write module for `hydra`, manually or programmaticaly parse `ipmitool` tool output*</sub>
+
+## Demo
+<div align=center>
+
+|user password bruteforcing|
+|:---:| 
+|![demo](https://github.com/ariary/cfuzz/blob/main/img/cfuzz-user-demo.gif)|
+
+</div>
 
 ## Install
 
@@ -40,7 +50,7 @@ Indicate:
 and let's get it!
 
 ```shell
-export CFUZZ_CMD="printf FUZZ | sudo -S id" # Example bruteforcing sudo password, I haven't found better
+export CFUZZ_CMD="printf FUZZ | sudo -S id" # Example bruteforcing user password, I haven't found better
 cfuzz -w [wordlist] 
 ```
 
@@ -49,9 +59,15 @@ Or if you prefer in one line:
 # example for subdomain enum
 cfuzz -w [wordlist] -t 5 ping -c 4 FUZZ.domain.net
 ```
-### Filter result
 
-Additionnaly, it is possible to filter displayed results:
+Additionnaly it is possible to:
+* **[Filter results](#filter-results)**
+* **[Custom displayed field](#displayed-field)**
+* **[Configure `cfuzz` run](#cfuzz-run-configuration)**
+
+### Filter results
+
+Additionaly, it is possible to filter displayed results:
 
 **stdout filters:**
 ```shell
