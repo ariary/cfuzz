@@ -130,7 +130,6 @@ func NewConfig() Config {
 
 	// parse display mode
 	config.DisplayModes = parseDisplayMode(stdoutDisplay, stderrDisplay, timeDisplay, codeDisplay)
-
 	return config
 }
 
@@ -149,8 +148,12 @@ func (c *Config) CheckConfig() error {
 	}
 
 	// check field consistency
-	if c.StdinFuzzing && !strings.Contains(c.Input, c.Keyword) {
-		return errors.New("Fuzzing keyword has not been found in stdin. keyword:" + c.Keyword + " command:" + c.Input)
+	if c.StdinFuzzing {
+		if !strings.Contains(c.Input, c.Keyword) {
+			return errors.New("Fuzzing keyword has not been found in stdin. keyword:" + c.Keyword + " command:" + c.Input)
+		} else {
+			return nil
+		}
 	} else if !strings.Contains(c.Command, c.Keyword) {
 		return errors.New("Fuzzing keyword has not been found in command. keyword:" + c.Keyword + " command:" + c.Command)
 	}
@@ -174,7 +177,7 @@ func parseDisplayMode(stdout bool, stderr bool, time bool, code bool) (modes []D
 	}
 
 	//default, if none
-	if len(modes) < 0 {
+	if len(modes) == 0 {
 		stdoutDisplay := StdoutDisplay{}
 		modes = []DisplayMode{stdoutDisplay}
 	}
