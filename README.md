@@ -6,7 +6,7 @@
 <br>
 
 
-The same thing as [`wfuzz`](https://github.com/xmendez/wfuzz) **but for command line fuzzing. This enables to fuzz command line execution and filter results.**
+The same thing as [`wfuzz`](https://github.com/xmendez/wfuzz) **but for command line fuzzing. This enables to fuzz any command line execution and filter results.**
 <br>*Also a good friend for bruteforcing*
   
 <strong><code>{ <a href="#install">Install it</a> ; <a href="#usage">Use it</a> } </code></strong>
