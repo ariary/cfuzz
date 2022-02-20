@@ -111,7 +111,7 @@ To make cfuzz more flexible and adapt to different constraints, many options are
 
 ### Displayed field
 
-It is also possible to choose which result field is displayed in `cfuzz`output:
+It is also possible to choose which result field is displayed in `cfuzz` output (also possible to use several):
 ```shell
   -oc, --stdout              display stdout number of characters
   -ec, --stderr              display stderr number of characters
