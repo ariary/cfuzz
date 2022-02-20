@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// DisplayMode: interface use to determine field to display in cfuzz output
+// DisplayMode: interface used to determine field to display in cfuzz output
 type DisplayMode interface {
 	DisplayString(result ExecResult) string
 	Name() string

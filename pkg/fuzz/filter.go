@@ -1,8 +1,12 @@
 package fuzz
 
-// DisplayMode: interface use to determine field to display in cfuzz errput
+import "strings"
+
+// Filter: interface used to determine which results will be displayed
 type Filter interface {
+	//IsOk: filter logic. Return true if the result pass the filter conditon
 	IsOk(result ExecResult) bool
+	//Name: return filter name
 	Name() string
 }
 
@@ -15,12 +19,12 @@ func (filter StdoutMaxFilter) Name() string {
 	return "stdout characters max"
 }
 
-// IsOk: return true if the lenght of stdout output is smaller or equal than max
+//IsOk: return true if the lenght of stdout output is smaller or equal than max
 func (maxFilter StdoutMaxFilter) IsOk(result ExecResult) bool {
 	return len(result.Stdout) <= maxFilter.Max
 }
 
-// StdoutMaxFilter: Filter that accept only result with more characters than a specific number
+//StdoutMaxFilter: Filter that accept only result with more characters than a specific number
 type StdoutMinFilter struct {
 	Min int
 }
@@ -29,11 +33,12 @@ func (filter StdoutMinFilter) Name() string {
 	return "stdout characters min"
 }
 
-// IsOk: return true if the lenght of stdout output is greater or equal than min
+//IsOk: return true if the lenght of stdout output is greater or equal than min
 func (filter StdoutMinFilter) IsOk(result ExecResult) bool {
 	return len(result.Stdout) >= filter.Min
 }
 
+//StdoutEqFilter: filter struct that accept only result with exact amoun of characters
 type StdoutEqFilter struct {
 	Eq int
 }
@@ -42,11 +47,28 @@ func (filter StdoutEqFilter) Name() string {
 	return "stdout characters equal"
 }
 
+//IsOK: return true if the number of characters is eqal
 func (filter StdoutEqFilter) IsOk(result ExecResult) bool {
 	return len(result.Stdout) == filter.Eq
 }
 
-// StderrMaxFilter: Filter that accept only result with less characters than a specific number
+//StdoutWordFilter: filter struct that accept only result containing specific word
+type StdoutWordFilter struct {
+	TargetWord string
+}
+
+//Name: return StdoutWordFilter name
+func (filter StdoutWordFilter) Name() string {
+	return "stdout word containing"
+}
+
+//IsOK: return true a specific word is found in result stdout. Note that this is equivalent to grep:
+//the word could be surrounded by non-space characters
+func (filter StdoutWordFilter) IsOk(result ExecResult) bool {
+	return strings.Contains(result.Stdout, filter.TargetWord)
+}
+
+//StderrMaxFilter: Filter that accept only result with less characters than a specific number
 type StderrMaxFilter struct {
 	Max int
 }

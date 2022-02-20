@@ -42,19 +42,20 @@ DISPLAY
 
 FILTER
  STDOUT:
-  -omin,--stdout-min         filter to only display if stdout characters number is lesser than n
-  -omax,--stdout-max         filter to only display if stdout characters number is greater than n
-  -oeq, --stdout-equal       filter to only display if stdout characters number is equal to n
+  -omin, --stdout-min         filter to only display if stdout characters number is lesser than n
+  -omax, --stdout-max         filter to only display if stdout characters number is greater than n
+  -oeq,  --stdout-equal       filter to only display if stdout characters number is equal to n
+  -ow,   --stdout-word        filter to only display if stdout cointains specific word
 
  STDERR:
-  -emin,--stderr-min         filter to only display if stderr characters number is lesser than n
-  -emax,--stderr-max         filter to only display if stderr characters number is greater than n
-  -eeq, --stderr-equal       filter to only display if stderr characters number is equal to n
+  -emin, --stderr-min         filter to only display if stderr characters number is lesser than n
+  -emax, --stderr-max         filter to only display if stderr characters number is greater than n
+  -eeq,  --stderr-equal       filter to only display if stderr characters number is equal to n
 
  TIME:
-  -tmin,--time-min           filter to only display if exectuion time is shorter than n seconds
-  -tmax,--time-max           filter to only display if exectuion time is longer than n seconds
-  -teq, --time-equal         filter to only display if exectuion time is shorter than n seconds
+  -tmin, --time-min           filter to only display if exectuion time is shorter than n seconds
+  -tmax, --time-max           filter to only display if exectuion time is longer than n seconds
+  -teq,  --time-equal         filter to only display if exectuion time is shorter than n seconds
 
  CODE:
   --success                  filter to only display if execution return a zero exit code
@@ -66,21 +67,21 @@ FILTER
 // NewConfig create Config instance
 func NewConfig() Config {
 	// default value
-	config := Config{Keyword: "FUZZ"} //FilterType is already by default Output but to keep it in mind
+	config := Config{Keyword: "FUZZ"}
 
-	//flag wordlist
+	// flag wordlist
 	flag.StringVar(&config.WordlistFilename, "wordlist", "", "wordlist used by fuzzer")
 	flag.StringVar(&config.WordlistFilename, "w", "", "wordlist used by fuzzer")
 
-	//flag keyword
+	// flag keyword
 	flag.StringVar(&config.Keyword, "keyword", "FUZZ", "keyword use to determine which zone to fuzz")
 	flag.StringVar(&config.Keyword, "k", "FUZZ", "keyword use to determine which zone to fuzz")
 
-	//flag shell
+	// flag shell
 	flag.StringVar(&config.Shell, "shell", "/bin/bash", "shell to use for execution")
 	flag.StringVar(&config.Shell, "s", "/bin/bash", "shell to use for execution")
 
-	//flag RoutineDelay
+	// flag RoutineDelay
 	flag.Int64Var(&config.RoutineDelay, "d", 0, "delay in ms between each thread launching. A thread execute the command. (default: 0)")
 	flag.Int64Var(&config.RoutineDelay, "delay", 0, "delay in ms between each thread launching. A thread execute the command. (default: 0)")
 
@@ -88,11 +89,11 @@ func NewConfig() Config {
 	flag.Int64Var(&config.Timeout, "to", 30, "Command execution timeout in s. After reaching it the command is killed. (default: 30)")
 	flag.Int64Var(&config.Timeout, "timeout", 30, "Command execution timeout in s. After reaching it the command is killed. (default: 30)")
 
-	//flag input
+	// flag input
 	flag.StringVar(&config.Input, "input", "", "fuzz stdin")
 	flag.StringVar(&config.Input, "i", "", "fuzz stdin")
 
-	//flag stdin-fuzzing
+	// flag stdin-fuzzing
 	flag.BoolVar(&config.StdinFuzzing, "stdin-fuzzing", false, "fuzz stdin")
 	flag.BoolVar(&config.StdinFuzzing, "if", false, "fuzz stdin")
 
@@ -133,7 +134,7 @@ func NewConfig() Config {
 	return config
 }
 
-// CheckConfig: assert that all required fields are present in config, and are adequate to cfuzz run
+//CheckConfig: assert that all required fields are present in config, and are adequate to cfuzz run
 func (c *Config) CheckConfig() error {
 	// check field
 	if c.WordlistFilename == "" {
@@ -157,7 +158,7 @@ func (c *Config) CheckConfig() error {
 	return nil
 }
 
-// parseDisplayMode: parse display mode chosen with flag and return array of these display mode interface. If none, default is stdout characters display mode
+//parseDisplayMode: Return array of display mode interface chosen with flags. If none, default is stdout characters display mode
 func parseDisplayMode(stdout bool, stderr bool, time bool, code bool) (modes []DisplayMode) {
 	if stdout {
 		modes = append(modes, StdoutDisplay{})
@@ -180,7 +181,7 @@ func parseDisplayMode(stdout bool, stderr bool, time bool, code bool) (modes []D
 	return modes
 }
 
-// parseFilters: parse all flags and determine the filters, add them in config struct
+//parseFilters: parse all flags and determine the filters, add them in the config struct given in parameter
 func parseFilters(config *Config) {
 	// stdout filters
 	flag.Func("omax", "filter to display only results with less than n characters", func(max string) error {
@@ -209,6 +210,12 @@ func parseFilters(config *Config) {
 			return err
 		}
 		filter := StdoutEqFilter{Eq: n}
+		config.Filters = append(config.Filters, filter)
+		return nil
+	})
+
+	flag.Func("ow", "filter to display only results cointaing specific in stdout", func(word string) error {
+		filter := StdoutWordFilter{TargetWord: word}
 		config.Filters = append(config.Filters, filter)
 		return nil
 	})
