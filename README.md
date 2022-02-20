@@ -8,6 +8,8 @@
 
 The same thing as [`wfuzz`](https://github.com/xmendez/wfuzz) **but for command line fuzzing. This enables to fuzz command line execution and filter results.**
 <br>*Also a good friend for bruteforcing*
+  
+<strong><code>{ <a href="#install">Install it</a> ; <a href="#usage">Use it</a> } </code></strong>
 </div>
 
 **Why?**<br>
@@ -16,56 +18,86 @@ To perform fuzzing or bruteforcing we have plenty of awesome tools ([`fuff`](htt
 Consequently, `cfuzz` can be seen either as an alternative of these tools for simple use case or an extension cause it handles a huge range of use case
 
 *Idea origin: when bruteforcing ipmi service to enumerate users. 3 options: use `msfconsole`, write module for `hydra`, manually or programmaticaly parse `ipmitool` tool output*
+## Install
+
+From release:
+```shell
+curl -lO -L -s https://github.com/ariary/cfuzz/releases/latest/download/cfuzz && chmod +x cfuzz
+```
+
+With go:
+```shell
+go install github.com/ariary/cfuzz/cmd/cfuzz@latest
+```
 
 ## Usage
 
-Indicate the command containing the fuzzing part with the keyword `FUZZ`, the wordlist and let's get it:
+Indicate:
+* the command, with the fuzzing part determined with the keyword `FUZZ`
+* the wordlist 
+
+and let's get it!
+
 ```shell
 export CFUZZ_CMD="printf FUZZ | sudo -S id" # Example bruteforcing sudo password, I haven't found better
-cfuzz -w [wordlist]
+cfuzz -w [wordlist] 
 ```
 
-Or in one line:
+Or if you prefer in one line:
 ```Shell
 # example for subdomain enum
 cfuzz -w [wordlist] -t 5 ping -c 4 FUZZ.domain.net
 ```
-
-Also, fuzzing  command `stdin` is possible by adding `--stdin-fuzzing [INPUT_WITH_CFUZZ_KEYWORD]`
-
 ### Filter result
 
-Choose an execution element to display and add filters to select specific execution characteristics
+Additionnaly, it is possible to filter displayed results:
 
-#### By command output
+**stdout filters:**
+```shell
+  -omin, --stdout-min         filter to only display if stdout characters number is lesser than n
+  -omax, --stdout-max         filter to only display if stdout characters number is greater than n
+  -oeq,  --stdout-equal       filter to only display if stdout characters number is equal to n
+  -ow,   --stdout-word        filter to only display if stdout cointains specific word
+```
 
-Use the flag `-oc`  to display stdout number of character, `-ec` for stderr
+**stderr filters:**
+```shell
+  -emin, --stderr-min         filter to only display if stderr characters number is lesser than n
+  -emax, --stderr-max         filter to only display if stderr characters number is greater than n
+  -eeq,  --stderr-equal       filter to only display if stderr characters number is equal to n
+```
 
-Additionnaly you can apply filter:
-* *Display only entry with more than n characters*: `--omin n` (Conversely `--omax`)
-* *Display only entry with exactly n characters*: `--oeq n`
+**execution time filters:**
+```shell
+  -tmin, --time-min           filter to only display if exectuion time is shorter than n seconds
+  -tmax, --time-max           filter to only display if exectuion time is longer than n seconds
+  -teq,  --time-equal         filter to only display if exectuion time is shorter than n seconds
+```
 
-For stderr flag replace `o` by `e`
+**command exit code filters:**
+```shell
+  --success                  filter to only display if execution return a zero exit code
+  --failure                  filter to only display if execution return a non-zero exit code
+```
 
-#### By command return code
+### `cfuzz` run configuration
+To make cfuzz more flexible and adapt to different constraints, many options are possible:
+```shell
+  -w, --wordlist            wordlist used by fuzzer
+  -d, --delay               delay in ms between each thread launching. A thread execute one command. (default: 0)
+  -k, --keyword             keyword used to determine which zone to fuzz (default: FUZZ)
+  -s, --shell               shell to use for execution (default: /bin/bash)
+  -to, --timeout            command execution timeout in s. After reaching it the command is killed. (default: 30)
+  -i, --input               provide stdin
+  -if, --stdin-fuzzing      fuzz sdtin instead of command line
+```
 
-Use the flag `-c` to display result regarding exit code of command execution.
+### Displayed field
 
-Additionnaly you can apply filter:
-* *Display only entry with 0 exit code*: `--success` (Conversely `--failure`)
-
-#### By command execution time
-
-Use the flag `-t` to display result regarding time execution of command.
-
-Additionnaly you can apply filter:
-* *Display only entry with more an exectuion time greater than n second*: `--tmin n` (Conversely `--tmax`)
-* *Display only entry with exactly n seconds*: `--teq n`
-
-### Configure
-
-* Timeout for command execution process (`-to`, `--timeout`)
-* Delay  between each command execution (`-d`, `--delay`)
-* Command input (`-i`, `--input`), to fuzz in stdin use `--stdin-fuzzing`
-* Shell to use for execution (`-s`,`--shell`)
-* Change `cfuzz` Keyword (`-k`, `--keyword`)
+It is also possible to choose which result field is displayed in `cfuzz`output:
+```shell
+  -oc, --stdout              display stdout number of characters
+  -ec, --stderr              display stderr number of characters
+  -t, --time                 display execution time
+  -c, --code                 display exit code
+```
