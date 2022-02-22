@@ -27,7 +27,7 @@ Fuzz command line execution and filter results
 
 CONFIGURATION
   -w, --wordlist            wordlist used by fuzzer
-  -d, --delay               delay in ms between each thread launching. A thread execute the command. (default: 0)
+  -d, --delay               delay in ms between each thread launching. A thread executes the command. (default: 0)
   -k, --keyword             keyword used to determine which zone to fuzz (default: FUZZ)
   -s, --shell               shell to use for execution (default: /bin/bash)
   -to, --timeout            command execution timeout in s. After reaching it the command is killed. (default: 30)
