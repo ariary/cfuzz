@@ -101,7 +101,7 @@ Additionaly, it is possible to filter displayed results:
 To make cfuzz more flexible and adapt to different constraints, many options are possible:
 ```shell
   -w, --wordlist            wordlist used by fuzzer
-  -d, --delay               delay in ms between each thread launching. A thread execute one command. (default: 0)
+  -d, --delay               delay in ms between each thread launching. A thread executes one command. (default: 0)
   -k, --keyword             keyword used to determine which zone to fuzz (default: FUZZ)
   -s, --shell               shell to use for execution (default: /bin/bash)
   -to, --timeout            command execution timeout in s. After reaching it the command is killed. (default: 30)
