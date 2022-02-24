@@ -27,7 +27,7 @@ type ExecResult struct {
 // 	er.Time = elapsed
 // }
 
-// PerformFuzzing: Exec specific crafted command for each wordlist file line read
+//PerformFuzzing: Exec specific crafted command for each wordlist file line read
 func PerformFuzzing(cfg Config) {
 	// read wordlist
 	wordlist, err := os.Open(cfg.WordlistFilename)
@@ -54,7 +54,7 @@ func PerformFuzzing(cfg Config) {
 	}
 }
 
-// Exec: exec the new command and lsend result to print function
+//Exec: exec the new command and send result to print function
 // Thanks to https://medium.com/@vCabbage/go-timeout-commands-with-os-exec-commandcontext-ba0c861ed738 for execution timeout
 func Exec(cfg Config, wg *sync.WaitGroup, substituteStr string) {
 	defer wg.Done()
@@ -108,8 +108,21 @@ func Exec(cfg Config, wg *sync.WaitGroup, substituteStr string) {
 // PrintExec: Print execution result according to configuration and filter
 func PrintExec(cfg Config, result ExecResult) {
 	// filter
+	// if cfg.Hide { //hide field that pass filter and show others
+	// 	for i := 0; i < len(cfg.Filters); i++ {
+	// 		if cfg.Filters[i].IsOk(result) {
+	// 			return //don't display it
+	// 		}
+	// 	}
+	// } else {
+	// 	for i := 0; i < len(cfg.Filters); i++ {
+	// 		if !cfg.Filters[i].IsOk(result) {
+	// 			return //don't display it
+	// 		}
+	// 	}
+	// }
 	for i := 0; i < len(cfg.Filters); i++ {
-		if !cfg.Filters[i].IsOk(result) {
+		if cfg.Filters[i].IsOk(result) == cfg.Hide {
 			return //don't display it
 		}
 	}
@@ -119,9 +132,5 @@ func PrintExec(cfg Config, result ExecResult) {
 		fields = append(fields, cfg.DisplayModes[i].DisplayString(result))
 	}
 	PrintLine(result.Substitute, fields...)
-
-	// filteredData := strconv.Itoa(len(result.Stdout))
-	// PrintLine(result.Substitute, filteredData)
-	// }
 
 }

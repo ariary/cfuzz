@@ -97,6 +97,8 @@ Additionaly, it is possible to filter displayed results:
   --failure                  filter to only display if execution return a non-zero exit code
 ```
 
+To only display results that don't pass the filter use `-H` or `--hide` flag.
+
 ### `cfuzz` run configuration
 To make cfuzz more flexible and adapt to different constraints, many options are possible:
 ```shell
