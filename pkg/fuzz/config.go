@@ -9,8 +9,11 @@ import (
 	"strings"
 )
 
+type wordlists []string
+
 type Config struct {
 	WordlistFilename string
+	Wordlists        wordlists
 	Keyword          string
 	Command          string
 	RoutineDelay     int64
@@ -18,6 +21,7 @@ type Config struct {
 	Timeout          int64
 	Input            string
 	StdinFuzzing     bool
+	Multiple         bool
 	DisplayModes     []DisplayMode
 	Hide             bool
 	Filters          []Filter
@@ -34,6 +38,7 @@ CONFIGURATION
   -to, --timeout              command execution timeout in s. After reaching it the command is killed. (default: 30)
   -i, --input                 provide stdin
   -if, --stdin-fuzzing        fuzz sdtin instead of command line
+  -m, --spider                fuzz multiple keyword places. You must provide as many wordlists as keywords. Provide them in order you wan them to be applied
 
 DISPLAY
   -oc, --stdout               display stdout number of characters
@@ -68,14 +73,25 @@ FILTER
   -h, --help                  prints help information 
 `
 
+func (i *wordlists) String() string {
+
+	return strings.Join(*i, ",")
+}
+
+func (i *wordlists) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
 // NewConfig create Config instance
 func NewConfig() Config {
 	// default value
 	config := Config{Keyword: "FUZZ"}
 
 	// flag wordlist
-	flag.StringVar(&config.WordlistFilename, "wordlist", "", "wordlist used by fuzzer")
-	flag.StringVar(&config.WordlistFilename, "w", "", "wordlist used by fuzzer")
+	// flag.StringVar(&config.WordlistFilename, "wordlist", "", "wordlist used by fuzzer")
+	// flag.StringVar(&config.WordlistFilename, "w", "", "wordlist used by fuzzer")
+	flag.Var(&config.Wordlists, "worldlist", "Some description for this param.")
 
 	// flag keyword
 	flag.StringVar(&config.Keyword, "keyword", "FUZZ", "keyword use to determine which zone to fuzz")
@@ -100,6 +116,10 @@ func NewConfig() Config {
 	// flag stdin-fuzzing
 	flag.BoolVar(&config.StdinFuzzing, "stdin-fuzzing", false, "fuzz stdin")
 	flag.BoolVar(&config.StdinFuzzing, "if", false, "fuzz stdin")
+
+	// flag spider
+	flag.BoolVar(&config.Multiple, "spider", false, "fuzz multiple keyword")
+	flag.BoolVar(&config.Multiple, "m", false, "fuzz multiple keyword")
 
 	// flag hide
 	flag.BoolVar(&config.Hide, "H", false, "hide fields that pass the filter")
@@ -144,7 +164,10 @@ func NewConfig() Config {
 //CheckConfig: assert that all required fields are present in config, and are adequate to cfuzz run
 func (c *Config) CheckConfig() error {
 	// check field
-	if c.WordlistFilename == "" {
+	// if c.WordlistFilename == "" {
+	// 	return errors.New("No wordlist provided. Please indicate a wordlist to use for fuzzing (-w,--wordlist)")
+	// }
+	if len(c.Wordlists) == 0 {
 		return errors.New("No wordlist provided. Please indicate a wordlist to use for fuzzing (-w,--wordlist)")
 	}
 
@@ -156,16 +179,33 @@ func (c *Config) CheckConfig() error {
 	}
 
 	// check field consistency
+	err := checkKeywordsPresence(c)
+
+	return err
+}
+
+//checkKeywordsPresence: check the consistency between flag and keyword presence (ie Keyword is present in stdin or command and if --spider check
+//there are as many keyword than wordlist)
+func checkKeywordsPresence(c *Config) error {
 	if c.StdinFuzzing {
-		if !strings.Contains(c.Input, c.Keyword) {
-			return errors.New("Fuzzing keyword has not been found in stdin. keyword:" + c.Keyword + " command:" + c.Input)
+		if c.Multiple { //stdin + multiple
+			keywordNum := strings.Count(c.Input+c.Command, c.Keyword)
+			if keywordNum != len(c.Wordlists) {
+				return errors.New("Please provide as many wordlists as keyword. keyword:" + c.Keyword + " input:" + c.Input + "  command:" + c.Command + "wordlist number:" + strconv.Itoa(len(c.Wordlists)))
+			}
+		} else if !strings.Contains(c.Input, c.Keyword) { //stdin simple
+			return errors.New("Fuzzing keyword has not been found in stdin. keyword:" + c.Keyword + " input:" + c.Input)
 		} else {
 			return nil
 		}
-	} else if !strings.Contains(c.Command, c.Keyword) {
+	} else if c.Multiple { // multiple w/o stdin
+		keywordNum := strings.Count(c.Command, c.Keyword)
+		if keywordNum != len(c.Wordlists) {
+			return errors.New("Please provide as many wordlists as keyword. keyword:" + c.Keyword + "  command:" + c.Command + "wordlist number:" + strconv.Itoa(len(c.Wordlists)))
+		}
+	} else if !strings.Contains(c.Command, c.Keyword) { //simple w/o stdin
 		return errors.New("Fuzzing keyword has not been found in command. keyword:" + c.Keyword + " command:" + c.Command)
 	}
-
 	return nil
 }
 
