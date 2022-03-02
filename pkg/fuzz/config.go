@@ -178,6 +178,9 @@ func (c *Config) CheckConfig() error {
 		return errors.New("No command provided. Please indicate it using environment variable CFUZZ_CMD or cfuzz [flag:value] [command]")
 	}
 
+	if c.Multiple && len(c.Wordlists) < 2 {
+		return errors.New("Only 1 wordlist has been provided with multiple wordlists/keyword mode (-m/--spider). use this option only with several wordlists")
+	}
 	// check field consistency
 	err := checkKeywordsPresence(c)
 
