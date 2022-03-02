@@ -27,40 +27,120 @@ type ExecResult struct {
 // 	er.Time = elapsed
 // }
 
-//PerformFuzzing: Exec specific crafted command for each wordlist file line read
-func PerformFuzzing(cfg Config) {
-	// read wordlist
-	wordlist, err := os.Open(cfg.WordlistFilename)
+//getLines: read a file a return a slice containing each lines
+func getLines(filename string) (wordlist []string) {
+	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer wordlist.Close()
-
-	var wg sync.WaitGroup
-
-	scanner := bufio.NewScanner(wordlist) // Caveat: Scanner will error with lines longer than 65536 characters. cf https://stackoverflow.com/questions/8757389/reading-a-file-line-by-line-in-go
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		time.Sleep(time.Duration(cfg.RoutineDelay) * time.Millisecond)
-		wg.Add(1)
-		substituteStr := scanner.Text()
-
-		go Exec(cfg, &wg, substituteStr)
+		wordlist = append(wordlist, scanner.Text())
 	}
 
-	wg.Wait()
+	return wordlist
+}
 
-	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
+//cartesianProduct: take two different string slices and return the cartesian product of both
+func cartesianProduct(list1 []string, list2 []string) (product [][]string) {
+	product = make([][]string, len(list1)*(len(list2)-1))
+	productIndex := 0
+	for i := 0; i < len(list1); i++ { //for each item of first list
+		for j := 1; j < len(list2); j++ { //couple it with other
+			product[productIndex] = append(product[productIndex], list1[i])
+			product[productIndex] = append(product[productIndex], list2[j])
+			productIndex++
+		}
 	}
+	return product
+}
+
+//cartesianProductPlusPlus: Perform cartesian product between a slice of string slice and a string slice. Beware: complexity -> quadratic
+func cartesianProductPlusPlus(list1 [][]string, list2 []string) (product [][]string) {
+	product = make([][]string, len(list1)*(len(list2)))
+	productIndex := 0
+	for i := 0; i < len(list1); i++ { //for each item of first list
+		for j := 0; j < len(list2); j++ { //couple it with other
+			product[productIndex] = append(product[productIndex], list1[i]...)
+			product[productIndex] = append(product[productIndex], list2[j])
+			productIndex++
+		}
+	}
+	return product
+}
+
+//PerformFuzzing: Exec specific crafted command for each wordlist file line read
+func PerformFuzzing(cfg Config) {
+	// read wordlist
+	if !cfg.Multiple { /////////KEEP THIS ITERATION IF SIMPLE (not multiple) => AVOID BROWSING THE WORDLIST TWICE
+		wordlist, err := os.Open(cfg.Wordlists[0])
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer wordlist.Close()
+
+		var wg sync.WaitGroup
+
+		scanner := bufio.NewScanner(wordlist) // Caveat: Scanner will error with lines longer than 65536 characters. cf https://stackoverflow.com/questions/8757389/reading-a-file-line-by-line-in-go
+		for scanner.Scan() {
+			time.Sleep(time.Duration(cfg.RoutineDelay) * time.Millisecond)
+			wg.Add(1)
+			substituteStr := scanner.Text()
+
+			go Exec(cfg, &wg, []string{substituteStr})
+		}
+
+		wg.Wait()
+
+		if err := scanner.Err(); err != nil {
+			log.Fatal(err)
+		}
+	} else { //multiple
+		//construct lists of word containing in wordlist
+		var wordlists [][]string
+		for i := 0; i < len(cfg.Wordlists); i++ {
+			wordlists = append(wordlists, getLines(cfg.Wordlists[i]))
+		}
+
+		//Browse list
+		substitutes := cartesianProduct(wordlists[0], wordlists[1])
+		for i := 2; i < len(wordlists); i++ {
+			substitutes = cartesianProductPlusPlus(substitutes, wordlists[i])
+
+		}
+
+		var wg sync.WaitGroup
+
+		for i := 0; i < len(substitutes); i++ {
+			wg.Add(1)
+			go Exec(cfg, &wg, substitutes[i])
+		}
+
+		wg.Wait()
+
+	}
+
 }
 
 //Exec: exec the new command and send result to print function
 // Thanks to https://medium.com/@vCabbage/go-timeout-commands-with-os-exec-commandcontext-ba0c861ed738 for execution timeout
-func Exec(cfg Config, wg *sync.WaitGroup, substituteStr string) {
+func Exec(cfg Config, wg *sync.WaitGroup, substitutesStr []string) {
 	defer wg.Done()
-	nCommand := strings.Replace(cfg.Command, cfg.Keyword, substituteStr, 1) //> 0, all replace
+	var mode int
+	if !cfg.Multiple {
+		mode = -1 //< 0 ~ all replace
+	} else {
+		mode = 1 //replace only first occurrence
+	}
 
-	input := strings.Replace(cfg.Input, cfg.Keyword, substituteStr, 1) //> 0, all replace
+	nCommand := cfg.Command
+	input := cfg.Input
+	for i := 0; i < len(substitutesStr); i++ {
+		nCommand = strings.Replace(nCommand, cfg.Keyword, substitutesStr[i], mode)
+
+		input = strings.Replace(input, cfg.Keyword, substitutesStr[i], mode)
+	}
 
 	// Create a new context and add a timeout to it
 	timeout := time.Duration(cfg.Timeout) * time.Second
@@ -83,6 +163,7 @@ func Exec(cfg Config, wg *sync.WaitGroup, substituteStr string) {
 	err := cmd.Run()
 	elapsed := time.Since(start)
 
+	substituteStr := strings.Join(substitutesStr, ",")
 	result := ExecResult{Substitute: substituteStr}
 	if ctx.Err() == context.DeadlineExceeded {
 		result.Timeout = true
