@@ -109,6 +109,7 @@ To make cfuzz more flexible and adapt to different constraints, many options are
   -to, --timeout            command execution timeout in s. After reaching it the command is killed. (default: 30)
   -i, --input               provide stdin
   -if, --stdin-fuzzing      fuzz sdtin instead of command line
+  -m, --spider              fuzz multiple keyword places. You must provide as many wordlists as keywords. Provide them in order you want them to be applied
 ```
 
 ### Displayed field
