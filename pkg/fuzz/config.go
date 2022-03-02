@@ -38,7 +38,7 @@ CONFIGURATION
   -to, --timeout              command execution timeout in s. After reaching it the command is killed. (default: 30)
   -i, --input                 provide stdin
   -if, --stdin-fuzzing        fuzz sdtin instead of command line
-  -m, --spider                fuzz multiple keyword places. You must provide as many wordlists as keywords. Provide them in order you wan them to be applied
+  -m, --spider                fuzz multiple keyword places. You must provide as many wordlists as keywords. Provide them in order you want them to be applied.
 
 DISPLAY
   -oc, --stdout               display stdout number of characters
@@ -176,6 +176,8 @@ func (c *Config) CheckConfig() error {
 
 	if c.Multiple && len(c.Wordlists) < 2 {
 		return errors.New("Only 1 wordlist has been provided with multiple wordlists/keyword mode (-m/--spider). use this option only with several wordlists")
+	} else if !c.Multiple && len(c.Wordlists) > 1 {
+		return errors.New("Several wordlists have been submitted. Please use -m flag to use more than one wordlist/keyword")
 	}
 	// check field consistency
 	err := checkKeywordsPresence(c)
