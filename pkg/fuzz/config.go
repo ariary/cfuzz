@@ -91,7 +91,7 @@ func NewConfig() Config {
 	// flag wordlist
 	// flag.StringVar(&config.WordlistFilename, "wordlist", "", "wordlist used by fuzzer")
 	// flag.StringVar(&config.WordlistFilename, "w", "", "wordlist used by fuzzer")
-	flag.Var(&config.Wordlists, "worldlist", "Some description for this param.")
+	flag.Var(&config.Wordlists, "wordlist", "Some description for this param.")
 
 	// flag keyword
 	flag.StringVar(&config.Keyword, "keyword", "FUZZ", "keyword use to determine which zone to fuzz")
