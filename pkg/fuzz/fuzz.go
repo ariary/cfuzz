@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -57,11 +56,24 @@ func cartesianProduct(list1 []string, list2 []string) (product [][]string) {
 	return product
 }
 
+//cartesianProductPlusPlus: Perform cartesian product between a slice of string slice and a string slice. Beware: complexity -> quadratic
+func cartesianProductPlusPlus(list1 [][]string, list2 []string) (product [][]string) {
+	product = make([][]string, len(list1)*(len(list2)))
+	productIndex := 0
+	for i := 0; i < len(list1); i++ { //for each item of first list
+		for j := 0; j < len(list2); j++ { //couple it with other
+			product[productIndex] = append(product[productIndex], list1[i]...)
+			product[productIndex] = append(product[productIndex], list2[j])
+			productIndex++
+		}
+	}
+	return product
+}
+
 //PerformFuzzing: Exec specific crafted command for each wordlist file line read
 func PerformFuzzing(cfg Config) {
-	/////////KEEP THIS ITERATION IF SIMPLE => AVOID BROWSE THE WORDLIST TWICE BUT ADAPT IT
 	// read wordlist
-	if !cfg.Multiple {
+	if !cfg.Multiple { /////////KEEP THIS ITERATION IF SIMPLE (not multiple) => AVOID BROWSING THE WORDLIST TWICE
 		wordlist, err := os.Open(cfg.Wordlists[0])
 		if err != nil {
 			log.Fatal(err)
@@ -91,12 +103,12 @@ func PerformFuzzing(cfg Config) {
 			wordlists = append(wordlists, getLines(cfg.Wordlists[i]))
 		}
 
-		// //Browse list
-		//OK for 2
+		//Browse list
 		substitutes := cartesianProduct(wordlists[0], wordlists[1])
-		// for i := 0; i < len(substitutes); i++ {
-		// 	fmt.Println(substitutes[i])
-		// }
+		for i := 2; i < len(wordlists); i++ {
+			substitutes = cartesianProductPlusPlus(substitutes, wordlists[i])
+
+		}
 
 		var wg sync.WaitGroup
 
@@ -107,14 +119,6 @@ func PerformFuzzing(cfg Config) {
 
 		wg.Wait()
 
-		// substitutes := cartesianProduct(wordlists[0], wordlists[1])
-		// for i := 1; i < len(wordlists)-1; i++ {
-		// 	for j := 0; j < len(substitutes); j++ {
-		// 		substitutes = append(substitutes, cartesianProduct(substitutes[j], wordlists[i])...)
-		// 		fmt.Println(substitutes)
-		// 	}
-
-		// }
 	}
 
 }
@@ -133,12 +137,11 @@ func Exec(cfg Config, wg *sync.WaitGroup, substitutesStr []string) {
 	nCommand := cfg.Command
 	input := cfg.Input
 	for i := 0; i < len(substitutesStr); i++ {
-		//fmt.Println("sub:", substitutesStr[i])
 		nCommand = strings.Replace(nCommand, cfg.Keyword, substitutesStr[i], mode)
 
 		input = strings.Replace(input, cfg.Keyword, substitutesStr[i], mode)
 	}
-	fmt.Println(nCommand)
+
 	// Create a new context and add a timeout to it
 	timeout := time.Duration(cfg.Timeout) * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
