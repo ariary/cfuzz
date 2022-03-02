@@ -48,7 +48,7 @@ DISPLAY
 
 FILTER
 
-  -H, --hide                  display only if result does not pass the filters
+  -H, --hide                  only display results that don't pass the filters
 
  STDOUT:
   -omin, --stdout-min         filter to only display if stdout characters number is lesser than n
@@ -163,10 +163,6 @@ func NewConfig() Config {
 
 //CheckConfig: assert that all required fields are present in config, and are adequate to cfuzz run
 func (c *Config) CheckConfig() error {
-	// check field
-	// if c.WordlistFilename == "" {
-	// 	return errors.New("No wordlist provided. Please indicate a wordlist to use for fuzzing (-w,--wordlist)")
-	// }
 	if len(c.Wordlists) == 0 {
 		return errors.New("No wordlist provided. Please indicate a wordlist to use for fuzzing (-w,--wordlist)")
 	}
