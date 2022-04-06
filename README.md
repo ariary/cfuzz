@@ -120,4 +120,6 @@ It is also possible to choose which result field is displayed in `cfuzz` output 
   -ec, --stderr              display stderr number of characters
   -t, --time                 display execution time
   -c, --code                 display exit code
+  -Hb, --no-banner           do not display banner
+  -w, --only-word            only display words
 ```
