@@ -36,7 +36,7 @@ func PrintConfig(cfg Config) {
 	line := `[*] ----------------------~~~~~~~~~~~~~~~~~~~---------------------- [*]`
 	fmt.Println(line)
 	fmt.Println()
-	PrintLine("command fuzzed", cfg.Command)
+	PrintLine("command fuzzed:", cfg.Command)
 	PrintLine("wordlist:", cfg.WordlistFilename)
 	if allDisplayModes != "" {
 		allDisplayModes = allDisplayModes[:len(allDisplayModes)-2] //delete last comma
@@ -45,6 +45,9 @@ func PrintConfig(cfg Config) {
 	if allFilters != "" {
 		allFilters = allFilters[:len(allFilters)-2] //delete last comma
 		PrintLine("filters:", allFilters)
+	}
+	if cfg.Hide {
+		fmt.Println("Only displays filter that do not pass the filter")
 	}
 	fmt.Println()
 	fmt.Println(line)
