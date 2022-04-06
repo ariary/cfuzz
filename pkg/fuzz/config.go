@@ -23,6 +23,7 @@ type Config struct {
 	StdinFuzzing     bool
 	Multiple         bool
 	DisplayModes     []DisplayMode
+	HideBanner       bool
 	Hide             bool
 	Filters          []Filter
 }
@@ -39,6 +40,7 @@ CONFIGURATION
   -i, --input                 provide stdin
   -if, --stdin-fuzzing        fuzz sdtin instead of command line
   -m, --spider                fuzz multiple keyword places. You must provide as many wordlists as keywords. Provide them in order you want them to be applied.
+  -Hb, --no-banner            do not display banner
 
 DISPLAY
   -oc, --stdout               display stdout number of characters
@@ -120,6 +122,10 @@ func NewConfig() Config {
 	// flag spider
 	flag.BoolVar(&config.Multiple, "spider", false, "fuzz multiple keyword")
 	flag.BoolVar(&config.Multiple, "m", false, "fuzz multiple keyword")
+
+	// flag hide
+	flag.BoolVar(&config.HideBanner, "Hb", false, "hide banner")
+	flag.BoolVar(&config.HideBanner, "no-banner", false, "hide banner")
 
 	// flag hide
 	flag.BoolVar(&config.Hide, "H", false, "hide fields that pass the filter")
@@ -236,52 +242,67 @@ func parseDisplayMode(stdout bool, stderr bool, time bool, code bool) (modes []D
 //parseFilters: parse all flags and determine the filters, add them in the config struct given in parameter
 func parseFilters(config *Config) {
 	// stdout filters
-	flag.Func("omax", "filter to display only results with less than n characters", func(max string) error {
-		n, err := strconv.Atoi(max)
-		if err != nil {
-			return err
-		}
-		filter := StdoutMaxFilter{Max: n}
-		config.Filters = append(config.Filters, filter)
-		return nil
-	})
+	maxS := []string{"omax", "stdout-max"}
+	for i := 0; i < len(maxS); i++ {
+		flag.Func(maxS[i], "filter to display only results with less than n characters", func(max string) error {
+			n, err := strconv.Atoi(max)
+			if err != nil {
+				return err
+			}
+			filter := StdoutMaxFilter{Max: n}
+			config.Filters = append(config.Filters, filter)
+			return nil
+		})
+	}
 
-	flag.Func("omin", "filter to display only results with more than n characters", func(min string) error {
-		n, err := strconv.Atoi(min)
-		if err != nil {
-			return err
-		}
-		filter := StdoutMinFilter{Min: n}
-		config.Filters = append(config.Filters, filter)
-		return nil
-	})
+	minS := []string{"omin", "stdout-min"}
+	for i := 0; i < len(minS); i++ {
+		flag.Func(minS[i], "filter to display only results with more than n characters", func(min string) error {
+			n, err := strconv.Atoi(min)
+			if err != nil {
+				return err
+			}
+			filter := StdoutMinFilter{Min: n}
+			config.Filters = append(config.Filters, filter)
+			return nil
+		})
+	}
 
-	flag.Func("oeq", "filter to display only results with exactly n characters", func(eq string) error {
-		n, err := strconv.Atoi(eq)
-		if err != nil {
-			return err
-		}
-		filter := StdoutEqFilter{Eq: n}
-		config.Filters = append(config.Filters, filter)
-		return nil
-	})
+	eqS := []string{"oeq", "stdout-equal"}
+	for i := 0; i < len(eqS); i++ {
+		flag.Func(eqS[i], "filter to display only results with exactly n characters", func(eq string) error {
+			n, err := strconv.Atoi(eq)
+			if err != nil {
+				return err
+			}
+			filter := StdoutEqFilter{Eq: n}
+			config.Filters = append(config.Filters, filter)
+			return nil
+		})
+	}
 
-	flag.Func("ow", "filter to display only results cointaing specific in stdout", func(word string) error {
-		filter := StdoutWordFilter{TargetWord: word}
-		config.Filters = append(config.Filters, filter)
-		return nil
-	})
+	wordS := []string{"ow", "stdout-word"}
+	for i := 0; i < len(wordS); i++ {
+		flag.Func(wordS[i], "filter to display only results cointaing specific in stdout", func(word string) error {
+			filter := StdoutWordFilter{TargetWord: word}
+			config.Filters = append(config.Filters, filter)
+			return nil
+		})
+	}
 
 	// stderr filters
-	flag.Func("emax", "filter to display only results with less than n characters", func(max string) error {
-		n, err := strconv.Atoi(max)
-		if err != nil {
-			return err
-		}
-		filter := StderrMaxFilter{Max: n}
-		config.Filters = append(config.Filters, filter)
-		return nil
-	})
+	emaxS := []string{"emax", "stderr-max"}
+	for i := 0; i < len(emaxS); i++ {
+		flag.Func(emaxS[i], "filter to display only results with less than n characters", func(max string) error {
+			n, err := strconv.Atoi(max)
+			if err != nil {
+				return err
+			}
+			filter := StderrMaxFilter{Max: n}
+			config.Filters = append(config.Filters, filter)
+			return nil
+		})
+	}
 
 	flag.Func("emin", "filter to display only results with more than n characters", func(min string) error {
 		n, err := strconv.Atoi(min)
@@ -304,15 +325,18 @@ func parseFilters(config *Config) {
 	})
 
 	// time filters
-	flag.Func("tmax", "filter to display only results with a time lesser than n seconds", func(max string) error {
-		n, err := strconv.Atoi(max)
-		if err != nil {
-			return err
-		}
-		filter := TimeMaxFilter{Max: n}
-		config.Filters = append(config.Filters, filter)
-		return nil
-	})
+	tmaxS := []string{"tmax", "time-max"}
+	for i := 0; i < len(tmaxS); i++ {
+		flag.Func(tmaxS[i], "filter to display only results with a time lesser than n seconds", func(max string) error {
+			n, err := strconv.Atoi(max)
+			if err != nil {
+				return err
+			}
+			filter := TimeMaxFilter{Max: n}
+			config.Filters = append(config.Filters, filter)
+			return nil
+		})
+	}
 
 	flag.Func("tmin", "filter to display only results with a time greater than n seconds", func(min string) error {
 		n, err := strconv.Atoi(min)

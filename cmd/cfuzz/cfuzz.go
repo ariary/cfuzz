@@ -13,8 +13,10 @@ func main() {
 	// config & banner
 	cfg := fuzz.NewConfig()
 
-	fuzz.Banner()
-	fuzz.PrintConfig(cfg)
+	if !cfg.HideBanner {
+		fuzz.Banner()
+		fuzz.PrintConfig(cfg)
+	}
 
 	if err := cfg.CheckConfig(); err != nil {
 		log.Fatal(err)
