@@ -12,20 +12,19 @@ import (
 type wordlists []string
 
 type Config struct {
-	WordlistFilename string
-	Wordlists        wordlists
-	Keyword          string
-	Command          string
-	RoutineDelay     int64
-	Shell            string
-	Timeout          int64
-	Input            string
-	StdinFuzzing     bool
-	Multiple         bool
-	DisplayModes     []DisplayMode
-	HideBanner       bool
-	Hide             bool
-	Filters          []Filter
+	Wordlists    wordlists
+	Keyword      string
+	Command      string
+	RoutineDelay int64
+	Shell        string
+	Timeout      int64
+	Input        string
+	StdinFuzzing bool
+	Multiple     bool
+	DisplayModes []DisplayMode
+	HideBanner   bool
+	Hide         bool
+	Filters      []Filter
 }
 
 var usage = `Usage of cfuzz: cfuzz [flags values] [command] or cfuzz [flags values] [command] with CFUZZ_CMD environment variable set
@@ -40,13 +39,15 @@ CONFIGURATION
   -i, --input                 provide stdin
   -if, --stdin-fuzzing        fuzz sdtin instead of command line
   -m, --spider                fuzz multiple keyword places. You must provide as many wordlists as keywords. Provide them in order you want them to be applied.
-  -Hb, --no-banner            do not display banner
 
 DISPLAY
   -oc, --stdout               display stdout number of characters
   -ec, --stderr               display stderr number of characters
   -t, --time                  display execution time
   -c, --code                  display exit code
+  -Hb, --no-banner            do not display banner
+  -w, --only-word            only display words
+  
 
 FILTER
 
@@ -56,7 +57,7 @@ FILTER
   -omin, --stdout-min         filter to only display if stdout characters number is lesser than n
   -omax, --stdout-max         filter to only display if stdout characters number is greater than n
   -oeq,  --stdout-equal       filter to only display if stdout characters number is equal to n
-  -ow,   --stdout-word        filter to only display if stdout cointains specific word
+  -r,   --stdout-word         filter to only display if stdout cointains specific word
 
  STDERR:
   -emin, --stderr-min         filter to only display if stderr characters number is lesser than n
@@ -93,7 +94,8 @@ func NewConfig() Config {
 	// flag wordlist
 	// flag.StringVar(&config.WordlistFilename, "wordlist", "", "wordlist used by fuzzer")
 	// flag.StringVar(&config.WordlistFilename, "w", "", "wordlist used by fuzzer")
-	flag.Var(&config.Wordlists, "wordlist", "Some description for this param.")
+	flag.Var(&config.Wordlists, "wordlist", "wordlist used by fuzzer")
+	flag.Var(&config.Wordlists, "w", "wordlist used by fuzzer")
 
 	// flag keyword
 	flag.StringVar(&config.Keyword, "keyword", "FUZZ", "keyword use to determine which zone to fuzz")
@@ -123,9 +125,14 @@ func NewConfig() Config {
 	flag.BoolVar(&config.Multiple, "spider", false, "fuzz multiple keyword")
 	flag.BoolVar(&config.Multiple, "m", false, "fuzz multiple keyword")
 
-	// flag hide
+	// flag hide banner
 	flag.BoolVar(&config.HideBanner, "Hb", false, "hide banner")
 	flag.BoolVar(&config.HideBanner, "no-banner", false, "hide banner")
+
+	// flag only word display
+	var noDisplay bool
+	flag.BoolVar(&noDisplay, "r", false, "print only word")
+	flag.BoolVar(&noDisplay, "only-word", false, "print only word")
 
 	// flag hide
 	flag.BoolVar(&config.Hide, "H", false, "hide fields that pass the filter")
@@ -149,10 +156,16 @@ func NewConfig() Config {
 	flag.BoolVar(&codeDisplay, "code", false, "display command execution exit code.")
 
 	// filters
+	var success, failure bool
+	flag.BoolVar(&success, "success", false, "filter to display only command with exit code 0.")
+	flag.BoolVar(&failure, "failure", false, "filter to display only command with a non-zero exit .")
+
 	parseFilters(&config)
 
 	flag.Usage = func() { fmt.Print(usage) }
 	flag.Parse()
+
+	parseSpecialFilters(&config, success, failure) //success and failure need flags to be parse before
 
 	// command
 	if cmdEnv := os.Getenv("CFUZZ_CMD"); cmdEnv != "" {
@@ -163,7 +176,10 @@ func NewConfig() Config {
 	}
 
 	// parse display mode
-	config.DisplayModes = parseDisplayMode(stdoutDisplay, stderrDisplay, timeDisplay, codeDisplay)
+	if !noDisplay {
+		config.DisplayModes = parseDisplayMode(stdoutDisplay, stderrDisplay, timeDisplay, codeDisplay)
+	}
+
 	return config
 }
 
@@ -239,7 +255,7 @@ func parseDisplayMode(stdout bool, stderr bool, time bool, code bool) (modes []D
 	return modes
 }
 
-//parseFilters: parse all flags and determine the filters, add them in the config struct given in parameter
+// parseFilters: parse all flags and determine the filters, add them in the config struct given in parameter
 func parseFilters(config *Config) {
 	// stdout filters
 	maxS := []string{"omax", "stdout-max"}
@@ -358,10 +374,10 @@ func parseFilters(config *Config) {
 		return nil
 	})
 
-	// code filters
-	var success, failure bool
-	flag.BoolVar(&success, "success", false, "filter to display only command with exit code 0.")
-	flag.BoolVar(&failure, "failure", false, "filter to display only command with a non-zero exit .")
+}
+
+// parseSpecialFilters: parse success and failure flags that need to flag be parsed before
+func parseSpecialFilters(config *Config, success bool, failure bool) {
 	if success {
 		filter := CodeSuccessFilter{Zero: true}
 		config.Filters = append(config.Filters, filter)

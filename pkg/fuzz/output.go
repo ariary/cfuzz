@@ -6,7 +6,7 @@ import (
 	"text/tabwriter"
 )
 
-//BAnner: Print the banner as it is trendy for this kind of tool. thanks to: https://patorjk.com/software/taag
+// Banner: Print the banner as it is trendy for this kind of tool. thanks to: https://patorjk.com/software/taag
 func Banner() {
 	banner := `
                  _/_/                                
@@ -24,6 +24,7 @@ _/          _/      _/    _/    _/        _/
 func PrintConfig(cfg Config) {
 	// filters
 	allFilters := ""
+	fmt.Println("tototo", cfg.Filters)
 	for i := 0; i < len(cfg.Filters); i++ {
 		allFilters += cfg.Filters[i].Name() + ", "
 	}
@@ -37,7 +38,7 @@ func PrintConfig(cfg Config) {
 	fmt.Println(line)
 	fmt.Println()
 	PrintLine("command fuzzed:", cfg.Command)
-	PrintLine("wordlist:", cfg.WordlistFilename)
+	PrintLine("wordlist:", cfg.Wordlists.String())
 	if allDisplayModes != "" {
 		allDisplayModes = allDisplayModes[:len(allDisplayModes)-2] //delete last comma
 		PrintLine("columns:", allDisplayModes)
