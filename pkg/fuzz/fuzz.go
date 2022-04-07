@@ -74,15 +74,21 @@ func cartesianProductPlusPlus(list1 [][]string, list2 []string) (product [][]str
 func PerformFuzzing(cfg Config) {
 	// read wordlist
 	if !cfg.Multiple { /////////KEEP THIS ITERATION IF SIMPLE (not multiple) => AVOID BROWSING THE WORDLIST TWICE
-		wordlist, err := os.Open(cfg.Wordlists[0])
-		if err != nil {
-			log.Fatal(err)
+		var scanner *bufio.Scanner
+		if cfg.StdinWordlist { //wordlist from stdin
+			scanner = bufio.NewScanner(os.Stdin)
+		} else { //wordlist from filename
+			wordlist, err := os.Open(cfg.Wordlists[0])
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer wordlist.Close()
+			scanner = bufio.NewScanner(wordlist)
 		}
-		defer wordlist.Close()
 
 		var wg sync.WaitGroup
 
-		scanner := bufio.NewScanner(wordlist) // Caveat: Scanner will error with lines longer than 65536 characters. cf https://stackoverflow.com/questions/8757389/reading-a-file-line-by-line-in-go
+		// Caveat: Scanner will error with lines longer than 65536 characters. cf https://stackoverflow.com/questions/8757389/reading-a-file-line-by-line-in-go
 		for scanner.Scan() {
 			time.Sleep(time.Duration(cfg.RoutineDelay) * time.Millisecond)
 			wg.Add(1)

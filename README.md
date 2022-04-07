@@ -107,9 +107,10 @@ To make cfuzz more flexible and adapt to different constraints, many options are
   -k, --keyword             keyword used to determine which zone to fuzz (default: FUZZ)
   -s, --shell               shell to use for execution (default: /bin/bash)
   -to, --timeout            command execution timeout in s. After reaching it the command is killed. (default: 30)
-  -i, --input               provide stdin
+  -i, --input               provide command stdin
   -if, --stdin-fuzzing      fuzz sdtin instead of command line
   -m, --spider              fuzz multiple keyword places. You must provide as many wordlists as keywords. Provide them in order you want them to be applied
+  -sw, --stdin-wordlist     provide wordlist in cfuzz stdin
 ```
 
 ### Displayed field

@@ -12,19 +12,20 @@ import (
 type wordlists []string
 
 type Config struct {
-	Wordlists    wordlists
-	Keyword      string
-	Command      string
-	RoutineDelay int64
-	Shell        string
-	Timeout      int64
-	Input        string
-	StdinFuzzing bool
-	Multiple     bool
-	DisplayModes []DisplayMode
-	HideBanner   bool
-	Hide         bool
-	Filters      []Filter
+	Wordlists     wordlists
+	Keyword       string
+	Command       string
+	RoutineDelay  int64
+	Shell         string
+	Timeout       int64
+	Input         string
+	StdinFuzzing  bool
+	Multiple      bool
+	StdinWordlist bool
+	DisplayModes  []DisplayMode
+	HideBanner    bool
+	Hide          bool
+	Filters       []Filter
 }
 
 var usage = `Usage of cfuzz: cfuzz [flags values] [command] or cfuzz [flags values] [command] with CFUZZ_CMD environment variable set
@@ -36,9 +37,10 @@ CONFIGURATION
   -k, --keyword               keyword used to determine which zone to fuzz (default: FUZZ)
   -s, --shell                 shell to use for execution (default: /bin/bash)
   -to, --timeout              command execution timeout in s. After reaching it the command is killed. (default: 30)
-  -i, --input                 provide stdin
+  -i, --input                 provide command stdin
   -if, --stdin-fuzzing        fuzz sdtin instead of command line
   -m, --spider                fuzz multiple keyword places. You must provide as many wordlists as keywords. Provide them in order you want them to be applied.
+  -sw, --stdin-wordlist       provide wordlist in cfuzz stdin
 
 DISPLAY
   -oc, --stdout               display stdout number of characters
@@ -125,6 +127,12 @@ func NewConfig() Config {
 	flag.BoolVar(&config.Multiple, "spider", false, "fuzz multiple keyword")
 	flag.BoolVar(&config.Multiple, "m", false, "fuzz multiple keyword")
 
+	// flag spider
+	flag.BoolVar(&config.StdinWordlist, "stdin-wordlist", false, "wordlist provided in stdin")
+	flag.BoolVar(&config.StdinWordlist, "sw", false, "wordlist provided in stdin")
+
+	// display mode
+
 	// flag hide banner
 	flag.BoolVar(&config.HideBanner, "Hb", false, "hide banner")
 	flag.BoolVar(&config.HideBanner, "no-banner", false, "hide banner")
@@ -138,7 +146,6 @@ func NewConfig() Config {
 	flag.BoolVar(&config.Hide, "H", false, "hide fields that pass the filter")
 	flag.BoolVar(&config.Hide, "hide", false, "hide fields that pass the filter")
 
-	// display mode
 	var stdoutDisplay bool
 	flag.BoolVar(&stdoutDisplay, "oc", false, "display command execution  number of characters in stdout.")
 	flag.BoolVar(&stdoutDisplay, "stdout-characters", false, "display execution command number of characters in stdout.")
@@ -185,8 +192,8 @@ func NewConfig() Config {
 
 //CheckConfig: assert that all required fields are present in config, and are adequate to cfuzz run
 func (c *Config) CheckConfig() error {
-	if len(c.Wordlists) == 0 {
-		return errors.New("No wordlist provided. Please indicate a wordlist to use for fuzzing (-w,--wordlist)")
+	if len(c.Wordlists) == 0 && !c.StdinWordlist {
+		return errors.New("No wordlist provided. Please indicate a wordlist to use for fuzzing (-w,--wordlist) or provide it trough stdin (--stdin-wordlist)")
 	}
 
 	if c.Keyword == "" {
@@ -194,6 +201,11 @@ func (c *Config) CheckConfig() error {
 	}
 	if c.Command == "" {
 		return errors.New("No command provided. Please indicate it using environment variable CFUZZ_CMD or cfuzz [flag:value] [command]")
+	}
+
+	//--spider & --stdin-wordlist incompatible
+	if c.Multiple && c.StdinWordlist {
+		return errors.New("--spider can't be used with --stdin-wordlist flag")
 	}
 
 	if c.Multiple && len(c.Wordlists) < 2 {
