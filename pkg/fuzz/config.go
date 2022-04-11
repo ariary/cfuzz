@@ -332,25 +332,31 @@ func parseFilters(config *Config) {
 		})
 	}
 
-	flag.Func("emin", "filter to display only results with more than n characters", func(min string) error {
-		n, err := strconv.Atoi(min)
-		if err != nil {
-			return err
-		}
-		filter := StderrMinFilter{Min: n}
-		config.Filters = append(config.Filters, filter)
-		return nil
-	})
+	eminS := []string{"emin", "stderr-min"}
+	for i := 0; i < len(emaxS); i++ {
+		flag.Func(eminS[i], "filter to display only results with more than n characters", func(min string) error {
+			n, err := strconv.Atoi(min)
+			if err != nil {
+				return err
+			}
+			filter := StderrMinFilter{Min: n}
+			config.Filters = append(config.Filters, filter)
+			return nil
+		})
+	}
 
-	flag.Func("eeq", "filter to display only results with exactly n characters", func(eq string) error {
-		n, err := strconv.Atoi(eq)
-		if err != nil {
-			return err
-		}
-		filter := StderrEqFilter{Eq: n}
-		config.Filters = append(config.Filters, filter)
-		return nil
-	})
+	eeqS := []string{"eeq", "stderr-equal"}
+	for i := 0; i < len(eeqS); i++ {
+		flag.Func(eeqS[i], "filter to display only results with exactly n characters", func(eq string) error {
+			n, err := strconv.Atoi(eq)
+			if err != nil {
+				return err
+			}
+			filter := StderrEqFilter{Eq: n}
+			config.Filters = append(config.Filters, filter)
+			return nil
+		})
+	}
 
 	// time filters
 	tmaxS := []string{"tmax", "time-max"}
@@ -366,25 +372,31 @@ func parseFilters(config *Config) {
 		})
 	}
 
-	flag.Func("tmin", "filter to display only results with a time greater than n seconds", func(min string) error {
-		n, err := strconv.Atoi(min)
-		if err != nil {
-			return err
-		}
-		filter := TimeMinFilter{Min: n}
-		config.Filters = append(config.Filters, filter)
-		return nil
-	})
+	tminS := []string{"tmin", "time-min"}
+	for i := 0; i < len(tminS); i++ {
+		flag.Func(tminS[i], "filter to display only results with a time greater than n seconds", func(min string) error {
+			n, err := strconv.Atoi(min)
+			if err != nil {
+				return err
+			}
+			filter := TimeMinFilter{Min: n}
+			config.Filters = append(config.Filters, filter)
+			return nil
+		})
+	}
 
-	flag.Func("teq", "filter to  display only results with a time equal to n seconds", func(eq string) error {
-		n, err := strconv.Atoi(eq)
-		if err != nil {
-			return err
-		}
-		filter := TimeEqFilter{Eq: n}
-		config.Filters = append(config.Filters, filter)
-		return nil
-	})
+	teqS := []string{"teq", "time-equal"}
+	for i := 0; i < len(teqS); i++ {
+		flag.Func(teqS[i], "filter to  display only results with a time equal to n seconds", func(eq string) error {
+			n, err := strconv.Atoi(eq)
+			if err != nil {
+				return err
+			}
+			filter := TimeEqFilter{Eq: n}
+			config.Filters = append(config.Filters, filter)
+			return nil
+		})
+	}
 
 }
 
