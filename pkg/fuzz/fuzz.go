@@ -87,7 +87,6 @@ func PerformFuzzing(cfg Config) {
 		}
 
 		var wg sync.WaitGroup
-
 		// Caveat: Scanner will error with lines longer than 65536 characters. cf https://stackoverflow.com/questions/8757389/reading-a-file-line-by-line-in-go
 		for scanner.Scan() {
 			time.Sleep(time.Duration(cfg.RoutineDelay) * time.Millisecond)
@@ -218,6 +217,5 @@ func PrintExec(cfg Config, result ExecResult) {
 	for i := 0; i < len(cfg.DisplayModes); i++ {
 		fields = append(fields, cfg.DisplayModes[i].DisplayString(result))
 	}
-	PrintLine(result.Substitute, fields...)
-
+	PrintLine(cfg, result.Substitute, fields...)
 }

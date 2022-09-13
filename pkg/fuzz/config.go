@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -26,6 +27,7 @@ type Config struct {
 	HideBanner    bool
 	Hide          bool
 	Filters       []Filter
+	ResultLogger  *log.Logger
 }
 
 var usage = `Usage of cfuzz: cfuzz [flags values] [command] or cfuzz [flags values] [command] with CFUZZ_CMD environment variable set
@@ -41,6 +43,7 @@ CONFIGURATION
   -if, --stdin-fuzzing        fuzz sdtin instead of command line
   -m, --spider                fuzz multiple keyword places. You must provide as many wordlists as keywords. Provide them in order you want them to be applied.
   -sw, --stdin-wordlist       provide wordlist in cfuzz stdin
+  -T, --threads               number of concurrent threads (if no limit is set the execution of the command could be modified)
 
 DISPLAY
   -oc, --stdout               display stdout number of characters
@@ -93,9 +96,12 @@ func NewConfig() Config {
 	// default value
 	config := Config{Keyword: "FUZZ"}
 
+	//logger
+	// minwidth, tabwidth, padding, padchar, flags
+	config.ResultLogger = log.New(os.Stdout, "", 0)
+
+	// CONFIGURATION
 	// flag wordlist
-	// flag.StringVar(&config.WordlistFilename, "wordlist", "", "wordlist used by fuzzer")
-	// flag.StringVar(&config.WordlistFilename, "w", "", "wordlist used by fuzzer")
 	flag.Var(&config.Wordlists, "wordlist", "wordlist used by fuzzer")
 	flag.Var(&config.Wordlists, "w", "wordlist used by fuzzer")
 
@@ -127,11 +133,11 @@ func NewConfig() Config {
 	flag.BoolVar(&config.Multiple, "spider", false, "fuzz multiple keyword")
 	flag.BoolVar(&config.Multiple, "m", false, "fuzz multiple keyword")
 
-	// flag spider
+	// flag stdin wordlist
 	flag.BoolVar(&config.StdinWordlist, "stdin-wordlist", false, "wordlist provided in stdin")
 	flag.BoolVar(&config.StdinWordlist, "sw", false, "wordlist provided in stdin")
 
-	// display mode
+	// DISPLAY MODE
 
 	// flag hide banner
 	flag.BoolVar(&config.HideBanner, "Hb", false, "hide banner")
@@ -162,7 +168,7 @@ func NewConfig() Config {
 	flag.BoolVar(&codeDisplay, "c", false, "display command execution exit code.")
 	flag.BoolVar(&codeDisplay, "code", false, "display command execution exit code.")
 
-	// filters
+	// FILTERS
 	var success, failure bool
 	flag.BoolVar(&success, "success", false, "filter to display only command with exit code 0.")
 	flag.BoolVar(&failure, "failure", false, "filter to display only command with a non-zero exit .")
@@ -195,6 +201,9 @@ func (c *Config) CheckConfig() error {
 	if len(c.Wordlists) == 0 && !c.StdinWordlist {
 		return errors.New("No wordlist provided. Please indicate a wordlist to use for fuzzing (-w,--wordlist) or provide it trough stdin (--stdin-wordlist)")
 	}
+	if len(c.Wordlists) != 0 && c.StdinWordlist {
+		return errors.New("-w/--wordlist can't be used with -sw/--stdin-wordlist flag")
+	}
 
 	if c.Keyword == "" {
 		return errors.New("Fuzzing Keyword can't be empty string")
@@ -205,7 +214,7 @@ func (c *Config) CheckConfig() error {
 
 	//--spider & --stdin-wordlist incompatible
 	if c.Multiple && c.StdinWordlist {
-		return errors.New("--spider can't be used with --stdin-wordlist flag")
+		return errors.New("--spider can't be used with -sw/--stdin-wordlist flag")
 	}
 
 	if c.Multiple && len(c.Wordlists) < 2 {

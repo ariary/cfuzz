@@ -2,7 +2,7 @@ package fuzz
 
 import (
 	"fmt"
-	"os"
+	"strings"
 	"text/tabwriter"
 )
 
@@ -13,7 +13,9 @@ func Banner() {
     _/_/_/    _/      _/    _/  _/_/_/_/  _/_/_/_/   
  _/        _/_/_/_/  _/    _/      _/        _/      
 _/          _/      _/    _/    _/        _/         
- _/_/_/    _/        _/_/_/  _/_/_/_/  _/_/_/_/									
+ _/_/_/    _/        _/_/_/  _/_/_/_/  _/_/_/_/			
+
+By @ariary (https://github.com/ariary)
 `
 
 	fmt.Println(banner)
@@ -24,7 +26,6 @@ _/          _/      _/    _/    _/        _/
 func PrintConfig(cfg Config) {
 	// filters
 	allFilters := ""
-	fmt.Println("tototo", cfg.Filters)
 	for i := 0; i < len(cfg.Filters); i++ {
 		allFilters += cfg.Filters[i].Name() + ", "
 	}
@@ -37,15 +38,20 @@ func PrintConfig(cfg Config) {
 	line := `[*] ----------------------~~~~~~~~~~~~~~~~~~~---------------------- [*]`
 	fmt.Println(line)
 	fmt.Println()
-	PrintLine("command fuzzed:", cfg.Command)
-	PrintLine("wordlist:", cfg.Wordlists.String())
+	PrintLine(cfg, "command fuzzed:", cfg.Command)
+	if len(cfg.Wordlists) != 0 {
+		PrintLine(cfg, "wordlist:", cfg.Wordlists.String())
+	} else if cfg.StdinWordlist {
+		PrintLine(cfg, "wordlist:", "from stdin")
+	}
+
 	if allDisplayModes != "" {
 		allDisplayModes = allDisplayModes[:len(allDisplayModes)-2] //delete last comma
-		PrintLine("columns:", allDisplayModes)
+		PrintLine(cfg, "columns:", allDisplayModes)
 	}
 	if allFilters != "" {
 		allFilters = allFilters[:len(allFilters)-2] //delete last comma
-		PrintLine("filters:", allFilters)
+		PrintLine(cfg, "filters:", allFilters)
 	}
 	if cfg.Hide {
 		fmt.Println("Only displays filter that do not pass the filter")
@@ -56,18 +62,20 @@ func PrintConfig(cfg Config) {
 }
 
 // Nice printing of a line containing 2 or more elements
-func PrintLine(value string, element ...string) {
-	w := new(tabwriter.Writer)
+func PrintLine(cfg Config, value string, element ...string) {
+	// string builder and tabwriter
+	var strBuilder strings.Builder
+	tabwriter := new(tabwriter.Writer)
+	// // minwidth, tabwidth, padding, padchar, flags
+	tabwriter.Init(&strBuilder, 40, 8, 0, '\t', 0)
 
-	// minwidth, tabwidth, padding, padchar, flags
-	w.Init(os.Stdout, 40, 8, 0, '\t', 0)
-
-	defer w.Flush()
 	line := value
 	for i := 0; i < len(element); i++ {
 		line += "\t" + element[i]
 	}
+	fmt.Fprintf(tabwriter, "%s", line) //write into tab -> write into string builder
 
-	fmt.Fprintf(w, "%s\n", line)
+	tabwriter.Flush() // Flush before calling String()
+	cfg.ResultLogger.Println(strBuilder.String())
 
 }
