@@ -82,6 +82,7 @@ Additionaly, it is possible to filter displayed results:
   -emin, --stderr-min         filter to only display if stderr characters number is lesser than n
   -emax, --stderr-max         filter to only display if stderr characters number is greater than n
   -eeq,  --stderr-equal       filter to only display if stderr characters number is equal to n
+  -ew,   --stderr-word        filter to only display if stderr cointains specific word
 ```
 
 **execution time filters:**
@@ -122,5 +123,6 @@ It is also possible to choose which result field is displayed in `cfuzz` output 
   -t, --time                 display execution time
   -c, --code                 display exit code
   -Hb, --no-banner           do not display banner
-  -w, --only-word            only display words
+  -r, --only-word            only display words
+  -f, --full-output          display full command execution output (can't be combined with others display mode)
 ```

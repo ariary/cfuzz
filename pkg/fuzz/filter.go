@@ -1,6 +1,8 @@
 package fuzz
 
-import "strings"
+import (
+	"strings"
+)
 
 // Filter: interface used to determine which results will be displayed
 type Filter interface {
@@ -9,6 +11,8 @@ type Filter interface {
 	//Name: return filter name
 	Name() string
 }
+
+// STDOUT FILTERS
 
 // StdoutMaxFilter: Filter that accept only result with less characters than a specific number
 type StdoutMaxFilter struct {
@@ -38,7 +42,7 @@ func (filter StdoutMinFilter) IsOk(result ExecResult) bool {
 	return len(result.Stdout) >= filter.Min
 }
 
-//StdoutEqFilter: filter struct that accept only result with exact amoun of characters
+//StdoutEqFilter: filter struct that accept only result with exact amount of characters
 type StdoutEqFilter struct {
 	Eq int
 }
@@ -67,6 +71,8 @@ func (filter StdoutWordFilter) Name() string {
 func (filter StdoutWordFilter) IsOk(result ExecResult) bool {
 	return strings.Contains(result.Stdout, filter.TargetWord)
 }
+
+// STDERR FILTERS
 
 //StderrMaxFilter: Filter that accept only result with less characters than a specific number
 type StderrMaxFilter struct {
@@ -108,6 +114,24 @@ func (filter StderrEqFilter) IsOk(result ExecResult) bool {
 	return len(result.Stderr) == filter.Eq
 }
 
+//StderrWordFilter: filter struct that accept only result containing specific word for stderr
+type StderrWordFilter struct {
+	TargetWord string
+}
+
+//Name: return StdoutWordFilter name
+func (filter StderrWordFilter) Name() string {
+	return "stderr word containing"
+}
+
+//IsOK: return true a specific word is found in result stdout. Note that this is equivalent to grep:
+//the word could be surrounded by non-space characters
+func (filter StderrWordFilter) IsOk(result ExecResult) bool {
+	return strings.Contains(result.Stderr, filter.TargetWord)
+}
+
+// TIME FILTERS
+
 type TimeMaxFilter struct {
 	Max int
 }
@@ -143,6 +167,8 @@ func (filter TimeEqFilter) Name() string {
 func (filter TimeEqFilter) IsOk(result ExecResult) bool {
 	return int(result.Time.Seconds()) == filter.Eq
 }
+
+// CODE FILTERS
 
 // CodeSuccessFilter: filter wether result regarding the exit code
 type CodeSuccessFilter struct {

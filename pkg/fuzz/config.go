@@ -24,6 +24,7 @@ type Config struct {
 	Multiple      bool
 	StdinWordlist bool
 	DisplayModes  []DisplayMode
+	FullDisplay   bool
 	HideBanner    bool
 	Hide          bool
 	Filters       []Filter
@@ -43,7 +44,6 @@ CONFIGURATION
   -if, --stdin-fuzzing        fuzz sdtin instead of command line
   -m, --spider                fuzz multiple keyword places. You must provide as many wordlists as keywords. Provide them in order you want them to be applied.
   -sw, --stdin-wordlist       provide wordlist in cfuzz stdin
-  -T, --threads               number of concurrent threads (if no limit is set the execution of the command could be modified)
 
 DISPLAY
   -oc, --stdout               display stdout number of characters
@@ -51,23 +51,23 @@ DISPLAY
   -t, --time                  display execution time
   -c, --code                  display exit code
   -Hb, --no-banner            do not display banner
-  -w, --only-word             only display words
-  
+  -r, --only-word             only display words (from wordlist)
+  -f, --full-output           display full command execution output (can't be combined with others display mode)
 
 FILTER
-
   -H, --hide                  only display results that don't pass the filters
 
  STDOUT:
   -omin, --stdout-min         filter to only display if stdout characters number is lesser than n
   -omax, --stdout-max         filter to only display if stdout characters number is greater than n
   -oeq,  --stdout-equal       filter to only display if stdout characters number is equal to n
-  -r,   --stdout-word         filter to only display if stdout cointains specific word
+  -ow,   --stdout-word        filter to only display if stdout cointains specific word
 
  STDERR:
   -emin, --stderr-min         filter to only display if stderr characters number is lesser than n
   -emax, --stderr-max         filter to only display if stderr characters number is greater than n
   -eeq,  --stderr-equal       filter to only display if stderr characters number is equal to n
+  -ew,   --stderr-word        filter to only display if stderr cointains specific word
 
  TIME:
   -tmin, --time-min           filter to only display if exectuion time is shorter than n seconds
@@ -168,6 +168,9 @@ func NewConfig() Config {
 	flag.BoolVar(&codeDisplay, "c", false, "display command execution exit code.")
 	flag.BoolVar(&codeDisplay, "code", false, "display command execution exit code.")
 
+	flag.BoolVar(&config.FullDisplay, "f", false, "display full command execution output")
+	flag.BoolVar(&config.FullDisplay, "full-output", false, "display full command execution output")
+
 	// FILTERS
 	var success, failure bool
 	flag.BoolVar(&success, "success", false, "filter to display only command with exit code 0.")
@@ -190,7 +193,7 @@ func NewConfig() Config {
 
 	// parse display mode
 	if !noDisplay {
-		config.DisplayModes = parseDisplayMode(stdoutDisplay, stderrDisplay, timeDisplay, codeDisplay)
+		config.DisplayModes = parseDisplayMode(&config, stdoutDisplay, stderrDisplay, timeDisplay, codeDisplay)
 	}
 
 	return config
@@ -221,6 +224,10 @@ func (c *Config) CheckConfig() error {
 		return errors.New("Only 1 wordlist has been provided with multiple wordlists/keyword mode (-m/--spider). use this option only with several wordlists")
 	} else if !c.Multiple && len(c.Wordlists) > 1 {
 		return errors.New("Several wordlists have been submitted. Please use -m flag to use more than one wordlist/keyword")
+	}
+
+	if c.FullDisplay && len(c.DisplayModes) > 0 {
+		return errors.New("-f/full-output can't be used with other display mode:" + c.DisplayModes[0].Name()) //only give the first one for example
 	}
 	// check field consistency
 	err := checkKeywordsPresence(c)
@@ -254,7 +261,7 @@ func checkKeywordsPresence(c *Config) error {
 }
 
 //parseDisplayMode: Return array of display mode interface chosen with flags. If none, default is stdout characters display mode
-func parseDisplayMode(stdout bool, stderr bool, time bool, code bool) (modes []DisplayMode) {
+func parseDisplayMode(c *Config, stdout bool, stderr bool, time bool, code bool) (modes []DisplayMode) {
 	if stdout {
 		modes = append(modes, StdoutDisplay{})
 	}
@@ -268,11 +275,14 @@ func parseDisplayMode(stdout bool, stderr bool, time bool, code bool) (modes []D
 		modes = append(modes, CodeDisplay{})
 	}
 
-	//default, if none
-	if len(modes) == 0 {
-		stdoutDisplay := StdoutDisplay{}
-		modes = []DisplayMode{stdoutDisplay}
+	//default, if none && not full display
+	if !c.FullDisplay {
+		if len(modes) == 0 {
+			stdoutDisplay := StdoutDisplay{}
+			modes = []DisplayMode{stdoutDisplay}
+		}
 	}
+
 	return modes
 }
 
@@ -362,6 +372,15 @@ func parseFilters(config *Config) {
 				return err
 			}
 			filter := StderrEqFilter{Eq: n}
+			config.Filters = append(config.Filters, filter)
+			return nil
+		})
+	}
+
+	ewordS := []string{"ew", "stderr-word"}
+	for i := 0; i < len(ewordS); i++ {
+		flag.Func(ewordS[i], "filter to display only results cointaing specific in stderr", func(word string) error {
+			filter := StderrWordFilter{TargetWord: word}
 			config.Filters = append(config.Filters, filter)
 			return nil
 		})

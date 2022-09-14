@@ -4,20 +4,23 @@ import (
 	"fmt"
 	"strings"
 	"text/tabwriter"
+
+	"github.com/ariary/go-utils/pkg/color"
 )
 
-// Banner: Print the banner as it is trendy for this kind of tool. thanks to: https://patorjk.com/software/taag
-func Banner() {
-	banner := `
+var nameDraw = color.Teal(`
                  _/_/                                
     _/_/_/    _/      _/    _/  _/_/_/_/  _/_/_/_/   
  _/        _/_/_/_/  _/    _/      _/        _/      
 _/          _/      _/    _/    _/        _/         
  _/_/_/    _/        _/_/_/  _/_/_/_/  _/_/_/_/			
 
-By @ariary (https://github.com/ariary)
-`
+ `)
+var author = color.Yellow("By @ariary (" + color.Underlined("https://github.com/ariary") + ")")
 
+// Banner: Print the banner as it is trendy for this kind of tool. thanks to: https://patorjk.com/software/taag
+func Banner() {
+	banner := nameDraw + author
 	fmt.Println(banner)
 	fmt.Println()
 }
@@ -54,14 +57,14 @@ func PrintConfig(cfg Config) {
 		PrintLine(cfg, "filters:", allFilters)
 	}
 	if cfg.Hide {
-		fmt.Println("Only displays filter that do not pass the filter")
+		fmt.Println("Only displays words that do not pass the filter")
 	}
 	fmt.Println()
 	fmt.Println(line)
 	fmt.Println()
 }
 
-// Nice printing of a line containing 2 or more elements
+//PrintLine: Nice printing of a line containing 2 or more elements
 func PrintLine(cfg Config, value string, element ...string) {
 	// string builder and tabwriter
 	var strBuilder strings.Builder
@@ -78,4 +81,21 @@ func PrintLine(cfg Config, value string, element ...string) {
 	tabwriter.Flush() // Flush before calling String()
 	cfg.ResultLogger.Println(strBuilder.String())
 
+}
+
+//PrintFullExecOutput Nice printing of command execution
+func PrintFullExecOutput(cfg Config, result ExecResult) {
+	//TODO
+	cfg.ResultLogger.Println()
+	cfg.ResultLogger.Println(color.Bold(color.Cyan(result.Substitute)))
+	if result.Stdout != "" {
+		cfg.ResultLogger.Println(color.GreenForeground("STDOUT:"))
+		cfg.ResultLogger.Println(result.Stdout)
+	}
+	if result.Stderr != "" {
+		cfg.ResultLogger.Println(color.RedForeground("STDERR:"))
+		cfg.ResultLogger.Println(result.Stderr)
+	}
+
+	cfg.ResultLogger.Println()
 }

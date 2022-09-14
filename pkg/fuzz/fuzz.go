@@ -193,29 +193,22 @@ func Exec(cfg Config, wg *sync.WaitGroup, substitutesStr []string) {
 
 // PrintExec: Print execution result according to configuration and filter
 func PrintExec(cfg Config, result ExecResult) {
-	// filter
-	// if cfg.Hide { //hide field that pass filter and show others
-	// 	for i := 0; i < len(cfg.Filters); i++ {
-	// 		if cfg.Filters[i].IsOk(result) {
-	// 			return //don't display it
-	// 		}
-	// 	}
-	// } else {
-	// 	for i := 0; i < len(cfg.Filters); i++ {
-	// 		if !cfg.Filters[i].IsOk(result) {
-	// 			return //don't display it
-	// 		}
-	// 	}
-	// }
-	for i := 0; i < len(cfg.Filters); i++ {
-		if cfg.Filters[i].IsOk(result) == cfg.Hide {
-			return //don't display it
+	if cfg.FullDisplay {
+		PrintFullExecOutput(cfg, result)
+		return
+	} else {
+
+		for i := 0; i < len(cfg.Filters); i++ {
+			if cfg.Filters[i].IsOk(result) == cfg.Hide {
+				return //don't display it
+			}
 		}
+		// display
+
+		var fields []string
+		for i := 0; i < len(cfg.DisplayModes); i++ {
+			fields = append(fields, cfg.DisplayModes[i].DisplayString(result))
+		}
+		PrintLine(cfg, result.Substitute, fields...)
 	}
-	// display
-	var fields []string
-	for i := 0; i < len(cfg.DisplayModes); i++ {
-		fields = append(fields, cfg.DisplayModes[i].DisplayString(result))
-	}
-	PrintLine(cfg, result.Substitute, fields...)
 }
