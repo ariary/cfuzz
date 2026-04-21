@@ -4,11 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -42,12 +44,38 @@ func getLines(filename string) (wordlist []string) {
 	return wordlist
 }
 
+// countLines counts newlines in a file without loading it fully into memory.
+func countLines(filename string) int {
+	f, err := os.Open(filename)
+	if err != nil {
+		return 0
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	n := 0
+	for scanner.Scan() {
+		n++
+	}
+	return n
+}
+
+// printProgress writes a progress indicator to stderr using \r to overwrite in place.
+// total == 0 means unknown (stdin mode).
+func printProgress(done, total int64) {
+	if total > 0 {
+		pct := float64(done) / float64(total) * 100
+		fmt.Fprintf(os.Stderr, "\r[%d/%d] %.1f%%  ", done, total, pct)
+	} else {
+		fmt.Fprintf(os.Stderr, "\r[%d done]  ", done)
+	}
+}
+
 //cartesianProduct: take two different string slices and return the cartesian product of both
 func cartesianProduct(list1 []string, list2 []string) (product [][]string) {
-	product = make([][]string, len(list1)*(len(list2)-1))
+	product = make([][]string, len(list1)*len(list2))
 	productIndex := 0
-	for i := 0; i < len(list1); i++ { //for each item of first list
-		for j := 1; j < len(list2); j++ { //couple it with other
+	for i := range list1 {
+		for j := range list2 {
 			product[productIndex] = append(product[productIndex], list1[i])
 			product[productIndex] = append(product[productIndex], list2[j])
 			productIndex++
@@ -58,10 +86,10 @@ func cartesianProduct(list1 []string, list2 []string) (product [][]string) {
 
 //cartesianProductPlusPlus: Perform cartesian product between a slice of string slice and a string slice. Beware: complexity -> quadratic
 func cartesianProductPlusPlus(list1 [][]string, list2 []string) (product [][]string) {
-	product = make([][]string, len(list1)*(len(list2)))
+	product = make([][]string, len(list1)*len(list2))
 	productIndex := 0
-	for i := 0; i < len(list1); i++ { //for each item of first list
-		for j := 0; j < len(list2); j++ { //couple it with other
+	for i := range list1 {
+		for j := range list2 {
 			product[productIndex] = append(product[productIndex], list1[i]...)
 			product[productIndex] = append(product[productIndex], list2[j])
 			productIndex++
@@ -70,62 +98,90 @@ func cartesianProductPlusPlus(list1 [][]string, list2 []string) (product [][]str
 	return product
 }
 
-//PerformFuzzing: Exec specific crafted command for each wordlist file line read
+// PerformFuzzing executes the fuzz run over the configured wordlist(s).
+// Concurrency is limited to cfg.Threads goroutines via a semaphore channel.
+// Progress is printed to stderr unless cfg.OnlyWord is true.
 func PerformFuzzing(cfg Config) {
-	// read wordlist
-	if !cfg.Multiple { /////////KEEP THIS ITERATION IF SIMPLE (not multiple) => AVOID BROWSING THE WORDLIST TWICE
+	sem := make(chan struct{}, cfg.Threads)
+	showProgress := !cfg.OnlyWord
+
+	if !cfg.Multiple {
 		var scanner *bufio.Scanner
-		if cfg.StdinWordlist { //wordlist from stdin
+		var total int64
+
+		if cfg.StdinWordlist {
 			scanner = bufio.NewScanner(os.Stdin)
-		} else { //wordlist from filename
+		} else {
 			wordlist, err := os.Open(cfg.Wordlists[0])
 			if err != nil {
 				log.Fatal(err)
 			}
 			defer wordlist.Close()
 			scanner = bufio.NewScanner(wordlist)
+			total = int64(countLines(cfg.Wordlists[0]))
 		}
 
 		var wg sync.WaitGroup
-		// Caveat: Scanner will error with lines longer than 65536 characters. cf https://stackoverflow.com/questions/8757389/reading-a-file-line-by-line-in-go
+		var doneCount atomic.Int64
+
 		for scanner.Scan() {
 			time.Sleep(time.Duration(cfg.RoutineDelay) * time.Millisecond)
+			word := scanner.Text()
+			sem <- struct{}{}
 			wg.Add(1)
-			substituteStr := scanner.Text()
-
-			go Exec(cfg, &wg, []string{substituteStr})
+			go func(w string) {
+				defer func() {
+					<-sem
+					n := doneCount.Add(1)
+					if showProgress {
+						printProgress(n, total)
+					}
+				}()
+				Exec(cfg, &wg, []string{w})
+			}(word)
 		}
-
 		wg.Wait()
+		if showProgress {
+			fmt.Fprintln(os.Stderr)
+		}
 
 		if err := scanner.Err(); err != nil {
 			log.Fatal(err)
 		}
-	} else { //multiple
-		//construct lists of word containing in wordlist
+	} else {
 		var wordlists [][]string
-		for i := 0; i < len(cfg.Wordlists); i++ {
-			wordlists = append(wordlists, getLines(cfg.Wordlists[i]))
+		for _, wlPath := range cfg.Wordlists {
+			wordlists = append(wordlists, getLines(wlPath))
 		}
 
-		//Browse list
 		substitutes := cartesianProduct(wordlists[0], wordlists[1])
 		for i := 2; i < len(wordlists); i++ {
 			substitutes = cartesianProductPlusPlus(substitutes, wordlists[i])
-
 		}
 
+		total := int64(len(substitutes))
 		var wg sync.WaitGroup
+		var doneCount atomic.Int64
 
-		for i := 0; i < len(substitutes); i++ {
+		for _, subs := range substitutes {
+			sem <- struct{}{}
 			wg.Add(1)
-			go Exec(cfg, &wg, substitutes[i])
+			go func() {
+				defer func() {
+					<-sem
+					n := doneCount.Add(1)
+					if showProgress {
+						printProgress(n, total)
+					}
+				}()
+				Exec(cfg, &wg, subs)
+			}()
 		}
-
 		wg.Wait()
-
+		if showProgress {
+			fmt.Fprintln(os.Stderr)
+		}
 	}
-
 }
 
 //Exec: exec the new command and send result to print function
@@ -141,10 +197,9 @@ func Exec(cfg Config, wg *sync.WaitGroup, substitutesStr []string) {
 
 	nCommand := cfg.Command
 	input := cfg.Input
-	for i := 0; i < len(substitutesStr); i++ {
-		nCommand = strings.Replace(nCommand, cfg.Keyword, substitutesStr[i], mode)
-
-		input = strings.Replace(input, cfg.Keyword, substitutesStr[i], mode)
+	for _, sub := range substitutesStr {
+		nCommand = strings.Replace(nCommand, cfg.Keyword, sub, mode)
+		input = strings.Replace(input, cfg.Keyword, sub, mode)
 	}
 
 	// Create a new context and add a timeout to it
@@ -191,24 +246,29 @@ func Exec(cfg Config, wg *sync.WaitGroup, substitutesStr []string) {
 	PrintExec(cfg, result)
 }
 
-// PrintExec: Print execution result according to configuration and filter
+// PrintExec prints execution result according to configuration and filters.
 func PrintExec(cfg Config, result ExecResult) {
 	if cfg.FullDisplay {
 		PrintFullExecOutput(cfg, result)
 		return
-	} else {
-
-		for i := 0; i < len(cfg.Filters); i++ {
-			if cfg.Filters[i].IsOk(result) == cfg.Hide {
-				return //don't display it
-			}
-		}
-		// display
-
-		var fields []string
-		for i := 0; i < len(cfg.DisplayModes); i++ {
-			fields = append(fields, cfg.DisplayModes[i].DisplayString(result))
-		}
-		PrintLine(cfg, result.Substitute, fields...)
 	}
+
+	for _, filter := range cfg.Filters {
+		if filter.IsOk(result) == cfg.Hide {
+			return
+		}
+	}
+
+	// AI filter (optional, wired from cmd layer to keep pkg/fuzz AI-free)
+	if cfg.AIFilterFn != nil {
+		if !cfg.AIFilterFn(result.Substitute, result.Stdout, result.Stderr, result.Code) {
+			return
+		}
+	}
+
+	var fields []string
+	for _, mode := range cfg.DisplayModes {
+		fields = append(fields, mode.DisplayString(result))
+	}
+	PrintLine(cfg, result.Substitute, fields...)
 }

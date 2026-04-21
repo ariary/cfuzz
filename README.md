@@ -57,13 +57,15 @@ cfuzz -w [wordlist]
 Or if you prefer in one line:
 ```Shell
 # example for subdomain enum
-cfuzz -w [wordlist] -t 5 ping -c 4 FUZZ.domain.net
+cfuzz -w [wordlist] ping -c 4 FUZZ.domain.net
 ```
 
 Additionnaly it is possible to:
 * **[Filter results](#filter-results)**
 * **[Custom displayed field](#displayed-field)**
 * **[Configure `cfuzz` run](#cfuzz-run-configuration)**
+* **[Generate wordlists with AI](#ai-features)**
+* **[Use cfuzz as an MCP server](#mcp-server)**
 
 ### Filter results
 
@@ -71,31 +73,31 @@ Additionaly, it is possible to filter displayed results:
 
 **stdout filters:**
 ```shell
-  -omin, --stdout-min         filter to only display if stdout characters number is lesser than n
-  -omax, --stdout-max         filter to only display if stdout characters number is greater than n
-  -oeq,  --stdout-equal       filter to only display if stdout characters number is equal to n
-  -ow,   --stdout-word        filter to only display if stdout cointains specific word
+  --stdout-min n      show only if stdout character count >= n
+  --stdout-max n      show only if stdout character count <= n
+  --stdout-eq  n      show only if stdout character count == n
+  --stdout-word w     show only if stdout contains word w (repeatable)
 ```
 
 **stderr filters:**
 ```shell
-  -emin, --stderr-min         filter to only display if stderr characters number is lesser than n
-  -emax, --stderr-max         filter to only display if stderr characters number is greater than n
-  -eeq,  --stderr-equal       filter to only display if stderr characters number is equal to n
-  -ew,   --stderr-word        filter to only display if stderr cointains specific word
+  --stderr-min n      show only if stderr character count >= n
+  --stderr-max n      show only if stderr character count <= n
+  --stderr-eq  n      show only if stderr character count == n
+  --stderr-word w     show only if stderr contains word w (repeatable)
 ```
 
 **execution time filters:**
 ```shell
-  -tmin, --time-min           filter to only display if exectuion time is shorter than n seconds
-  -tmax, --time-max           filter to only display if exectuion time is longer than n seconds
-  -teq,  --time-equal         filter to only display if exectuion time is shorter than n seconds
+  --time-min n        show only if execution time >= n seconds
+  --time-max n        show only if execution time <= n seconds
+  --time-eq  n        show only if execution time == n seconds
 ```
 
 **command exit code filters:**
 ```shell
-  --success                  filter to only display if execution return a zero exit code
-  --failure                  filter to only display if execution return a non-zero exit code
+  --success           show only if execution returns exit code 0
+  --failure           show only if execution returns a non-zero exit code
 ```
 
 To only display results that don't pass the filter use `-H` or `--hide` flag.
@@ -103,26 +105,72 @@ To only display results that don't pass the filter use `-H` or `--hide` flag.
 ### `cfuzz` run configuration
 To make cfuzz more flexible and adapt to different constraints, many options are possible:
 ```shell
-  -w, --wordlist            wordlist used by fuzzer
-  -d, --delay               delay in ms between each thread launching. A thread executes one command. (default: 0)
-  -k, --keyword             keyword used to determine which zone to fuzz (default: FUZZ)
-  -s, --shell               shell to use for execution (default: /bin/bash)
-  -to, --timeout            command execution timeout in s. After reaching it the command is killed. (default: 30)
-  -i, --input               provide command stdin
-  -if, --stdin-fuzzing      fuzz sdtin instead of command line
-  -m, --spider              fuzz multiple keyword places. You must provide as many wordlists as keywords. Provide them in order you want them to be applied
-  -sw, --stdin-wordlist     provide wordlist in cfuzz stdin
+  -w, --wordlist        wordlist file(s) for fuzzing (repeatable with --spider)
+  -d, --delay           delay in ms between goroutine launches (default: 0)
+  -j, --threads         max concurrent workers (default: 50)
+  -k, --keyword         keyword to replace in command (default: FUZZ)
+  -s, --shell           shell to use for execution (default: /bin/bash)
+      --timeout         command execution timeout in seconds (default: 30)
+  -i, --input           provide command stdin
+      --stdin-fuzzing   fuzz stdin instead of command line
+  -m, --spider          fuzz multiple keyword positions (requires multiple -w)
+      --stdin-wordlist  read wordlist from cfuzz stdin
 ```
 
 ### Displayed field
 
 It is also possible to choose which result field is displayed in `cfuzz` output (also possible to use several):
 ```shell
-  -oc, --stdout              display stdout number of characters
-  -ec, --stderr              display stderr number of characters
-  -t, --time                 display execution time
-  -c, --code                 display exit code
-  -Hb, --no-banner           do not display banner
-  -r, --only-word            only display words
-  -f, --full-output          display full command execution output (can't be combined with others display mode)
+      --stdout-chars    display stdout character count
+      --stderr-chars    display stderr character count
+  -t, --time            display execution time
+  -c, --code            display exit code
+      --no-banner       hide banner
+  -r, --only-word       print only matched words (no metadata columns)
+  -f, --full-output     display full command execution output (can't be combined with other display modes)
 ```
+
+### AI features
+
+`cfuzz` integrates with Claude (via the Anthropic API) for two AI-powered workflows. Both require the `ANTHROPIC_API_KEY` environment variable to be set.
+
+**AI filter** — describe what an interesting result looks like in plain English; `cfuzz` will ask Claude to evaluate each execution result and only show the ones that match:
+
+```shell
+cfuzz -w wordlist.txt --ai-filter "output contains an error about invalid credentials" \
+  curl -s http://target/login -d "user=admin&pass=FUZZ"
+```
+
+**AI wordlist generation** — generate a context-aware wordlist by describing what you need:
+
+```shell
+cfuzz wordlist "default credentials for network switches"
+cfuzz wordlist "common web admin paths" -n 50
+```
+
+Output is printed to stdout, one entry per line, making it easy to pipe directly into cfuzz:
+
+```shell
+cfuzz wordlist "linux privilege escalation binaries" | \
+  cfuzz --stdin-wordlist "sudo -l FUZZ 2>/dev/null | grep -v 'not allowed'"
+```
+
+### MCP server
+
+`cfuzz` can run as a [Model Context Protocol](https://modelcontextprotocol.io) server, exposing a `fuzz` tool that any MCP-compatible AI assistant can call:
+
+```shell
+cfuzz mcp
+```
+
+To register with Claude Desktop, add to `~/.claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "cfuzz": { "command": "cfuzz", "args": ["mcp"] }
+  }
+}
+```
+
+The `fuzz` tool accepts: `command` (string), `wordlist` (array of strings), and optional `threads`, `timeout`, `success_only`, `stdout_word`, and `ai_filter` parameters.
