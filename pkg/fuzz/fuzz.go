@@ -46,8 +46,8 @@ func getLines(filename string) (wordlist []string) {
 func cartesianProduct(list1 []string, list2 []string) (product [][]string) {
 	product = make([][]string, len(list1)*len(list2))
 	productIndex := 0
-	for i := 0; i < len(list1); i++ { //for each item of first list
-		for j := 0; j < len(list2); j++ { //couple it with other
+	for i := range list1 {
+		for j := range list2 {
 			product[productIndex] = append(product[productIndex], list1[i])
 			product[productIndex] = append(product[productIndex], list2[j])
 			productIndex++
@@ -58,10 +58,10 @@ func cartesianProduct(list1 []string, list2 []string) (product [][]string) {
 
 //cartesianProductPlusPlus: Perform cartesian product between a slice of string slice and a string slice. Beware: complexity -> quadratic
 func cartesianProductPlusPlus(list1 [][]string, list2 []string) (product [][]string) {
-	product = make([][]string, len(list1)*(len(list2)))
+	product = make([][]string, len(list1)*len(list2))
 	productIndex := 0
-	for i := 0; i < len(list1); i++ { //for each item of first list
-		for j := 0; j < len(list2); j++ { //couple it with other
+	for i := range list1 {
+		for j := range list2 {
 			product[productIndex] = append(product[productIndex], list1[i]...)
 			product[productIndex] = append(product[productIndex], list2[j])
 			productIndex++
@@ -141,10 +141,9 @@ func Exec(cfg Config, wg *sync.WaitGroup, substitutesStr []string) {
 
 	nCommand := cfg.Command
 	input := cfg.Input
-	for i := 0; i < len(substitutesStr); i++ {
-		nCommand = strings.Replace(nCommand, cfg.Keyword, substitutesStr[i], mode)
-
-		input = strings.Replace(input, cfg.Keyword, substitutesStr[i], mode)
+	for _, sub := range substitutesStr {
+		nCommand = strings.Replace(nCommand, cfg.Keyword, sub, mode)
+		input = strings.Replace(input, cfg.Keyword, sub, mode)
 	}
 
 	// Create a new context and add a timeout to it
