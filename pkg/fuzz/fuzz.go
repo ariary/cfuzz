@@ -44,10 +44,10 @@ func getLines(filename string) (wordlist []string) {
 
 //cartesianProduct: take two different string slices and return the cartesian product of both
 func cartesianProduct(list1 []string, list2 []string) (product [][]string) {
-	product = make([][]string, len(list1)*(len(list2)-1))
+	product = make([][]string, len(list1)*len(list2))
 	productIndex := 0
 	for i := 0; i < len(list1); i++ { //for each item of first list
-		for j := 1; j < len(list2); j++ { //couple it with other
+		for j := 0; j < len(list2); j++ { //couple it with other
 			product[productIndex] = append(product[productIndex], list1[i])
 			product[productIndex] = append(product[productIndex], list2[j])
 			productIndex++
