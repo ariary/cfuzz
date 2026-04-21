@@ -4,11 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -42,6 +44,32 @@ func getLines(filename string) (wordlist []string) {
 	return wordlist
 }
 
+// countLines counts newlines in a file without loading it fully into memory.
+func countLines(filename string) int {
+	f, err := os.Open(filename)
+	if err != nil {
+		return 0
+	}
+	defer f.Close()
+	scanner := bufio.NewScanner(f)
+	n := 0
+	for scanner.Scan() {
+		n++
+	}
+	return n
+}
+
+// printProgress writes a progress indicator to stderr using \r to overwrite in place.
+// total == 0 means unknown (stdin mode).
+func printProgress(done, total int64) {
+	if total > 0 {
+		pct := float64(done) / float64(total) * 100
+		fmt.Fprintf(os.Stderr, "\r[%d/%d] %.1f%%  ", done, total, pct)
+	} else {
+		fmt.Fprintf(os.Stderr, "\r[%d done]  ", done)
+	}
+}
+
 //cartesianProduct: take two different string slices and return the cartesian product of both
 func cartesianProduct(list1 []string, list2 []string) (product [][]string) {
 	product = make([][]string, len(list1)*len(list2))
@@ -72,11 +100,15 @@ func cartesianProductPlusPlus(list1 [][]string, list2 []string) (product [][]str
 
 // PerformFuzzing executes the fuzz run over the configured wordlist(s).
 // Concurrency is limited to cfg.Threads goroutines via a semaphore channel.
+// Progress is printed to stderr unless cfg.OnlyWord is true.
 func PerformFuzzing(cfg Config) {
 	sem := make(chan struct{}, cfg.Threads)
+	showProgress := !cfg.OnlyWord
 
 	if !cfg.Multiple {
 		var scanner *bufio.Scanner
+		var total int64
+
 		if cfg.StdinWordlist {
 			scanner = bufio.NewScanner(os.Stdin)
 		} else {
@@ -86,20 +118,32 @@ func PerformFuzzing(cfg Config) {
 			}
 			defer wordlist.Close()
 			scanner = bufio.NewScanner(wordlist)
+			total = int64(countLines(cfg.Wordlists[0]))
 		}
 
 		var wg sync.WaitGroup
+		var doneCount atomic.Int64
+
 		for scanner.Scan() {
 			time.Sleep(time.Duration(cfg.RoutineDelay) * time.Millisecond)
 			word := scanner.Text()
 			sem <- struct{}{}
 			wg.Add(1)
 			go func(w string) {
-				defer func() { <-sem }()
+				defer func() {
+					<-sem
+					n := doneCount.Add(1)
+					if showProgress {
+						printProgress(n, total)
+					}
+				}()
 				Exec(cfg, &wg, []string{w})
 			}(word)
 		}
 		wg.Wait()
+		if showProgress {
+			fmt.Fprintln(os.Stderr)
+		}
 
 		if err := scanner.Err(); err != nil {
 			log.Fatal(err)
@@ -115,17 +159,29 @@ func PerformFuzzing(cfg Config) {
 			substitutes = cartesianProductPlusPlus(substitutes, wordlists[i])
 		}
 
+		total := int64(len(substitutes))
 		var wg sync.WaitGroup
+		var doneCount atomic.Int64
+
 		for _, subs := range substitutes {
 			subs := subs
 			sem <- struct{}{}
 			wg.Add(1)
 			go func() {
-				defer func() { <-sem }()
+				defer func() {
+					<-sem
+					n := doneCount.Add(1)
+					if showProgress {
+						printProgress(n, total)
+					}
+				}()
 				Exec(cfg, &wg, subs)
 			}()
 		}
 		wg.Wait()
+		if showProgress {
+			fmt.Fprintln(os.Stderr)
+		}
 	}
 }
 
