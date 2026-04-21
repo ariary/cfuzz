@@ -39,7 +39,7 @@ func runMCP(_ *cobra.Command, _ []string) {
 	mcp.Serve(handleFuzzCall)
 }
 
-func handleFuzzCall(args map[string]interface{}) (string, error) {
+func handleFuzzCall(args map[string]any) (string, error) {
 	cfg := fuzz.DefaultConfig()
 	cfg.HideBanner = true
 	cfg.OnlyWord = false
@@ -50,7 +50,7 @@ func handleFuzzCall(args map[string]interface{}) (string, error) {
 	}
 	cfg.Command = command
 
-	rawList, ok := args["wordlist"].([]interface{})
+	rawList, ok := args["wordlist"].([]any)
 	if !ok || len(rawList) == 0 {
 		return "", fmt.Errorf("wordlist is required and must be a non-empty array")
 	}
