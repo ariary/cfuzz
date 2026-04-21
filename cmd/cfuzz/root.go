@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ariary/cfuzz/pkg/ai"
 	"github.com/ariary/cfuzz/pkg/fuzz"
 	"github.com/spf13/cobra"
 )
@@ -120,7 +121,14 @@ func runFuzz(cmd *cobra.Command, args []string) error {
 	)
 
 	if cfg.AIFilter != "" {
-		fmt.Fprintln(os.Stderr, "note: --ai-filter wiring will be added in a later task")
+		aiClient, err := ai.NewClient()
+		if err != nil {
+			return fmt.Errorf("--ai-filter requires ANTHROPIC_API_KEY: %w", err)
+		}
+		criterion := cfg.AIFilter
+		cfg.AIFilterFn = func(word, stdout, stderr, code string) bool {
+			return ai.IsInteresting(aiClient, criterion, word, stdout, stderr, code)
+		}
 	}
 
 	if !cfg.HideBanner {

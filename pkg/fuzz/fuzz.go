@@ -246,24 +246,29 @@ func Exec(cfg Config, wg *sync.WaitGroup, substitutesStr []string) {
 	PrintExec(cfg, result)
 }
 
-// PrintExec: Print execution result according to configuration and filter
+// PrintExec prints execution result according to configuration and filters.
 func PrintExec(cfg Config, result ExecResult) {
 	if cfg.FullDisplay {
 		PrintFullExecOutput(cfg, result)
 		return
-	} else {
-
-		for i := 0; i < len(cfg.Filters); i++ {
-			if cfg.Filters[i].IsOk(result) == cfg.Hide {
-				return //don't display it
-			}
-		}
-		// display
-
-		var fields []string
-		for i := 0; i < len(cfg.DisplayModes); i++ {
-			fields = append(fields, cfg.DisplayModes[i].DisplayString(result))
-		}
-		PrintLine(cfg, result.Substitute, fields...)
 	}
+
+	for _, filter := range cfg.Filters {
+		if filter.IsOk(result) == cfg.Hide {
+			return
+		}
+	}
+
+	// AI filter (optional, wired from cmd layer to keep pkg/fuzz AI-free)
+	if cfg.AIFilterFn != nil {
+		if !cfg.AIFilterFn(result.Substitute, result.Stdout, result.Stderr, result.Code) {
+			return
+		}
+	}
+
+	var fields []string
+	for _, mode := range cfg.DisplayModes {
+		fields = append(fields, mode.DisplayString(result))
+	}
+	PrintLine(cfg, result.Substitute, fields...)
 }
