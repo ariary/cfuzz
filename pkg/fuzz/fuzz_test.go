@@ -1,8 +1,12 @@
 package fuzz
 
 import (
+	"fmt"
+	"log"
+	"os"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -41,5 +45,46 @@ func TestCartesianProduct_FirstEntryOfList2Included(t *testing.T) {
 	}
 	if result[0][1] != "firstpass" {
 		t.Errorf("expected first list2 entry to be included, got %q", result[0][1])
+	}
+}
+
+type syncWriter struct {
+	mu  sync.Mutex
+	buf strings.Builder
+}
+
+func (w *syncWriter) Write(b []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.buf.Write(b)
+}
+
+func TestPerformFuzzing_ProcessesAllWords(t *testing.T) {
+	tmp, err := os.CreateTemp("", "cfuzz-wl-*.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmp.Name())
+
+	const wordCount = 20
+	for i := 0; i < wordCount; i++ {
+		fmt.Fprintf(tmp, "word%d\n", i)
+	}
+	tmp.Close()
+
+	sw := &syncWriter{}
+	cfg := DefaultConfig()
+	cfg.HideBanner = true
+	cfg.Threads = 3
+	cfg.Command = "echo FUZZ"
+	cfg.Wordlists = []string{tmp.Name()}
+	cfg.DisplayModes = BuildDisplayModes(false, false, false, false, false)
+	cfg.ResultLogger = log.New(sw, "", 0)
+
+	PerformFuzzing(cfg)
+
+	lines := strings.Split(strings.TrimSpace(sw.buf.String()), "\n")
+	if len(lines) != wordCount {
+		t.Errorf("expected %d result lines, got %d:\n%s", wordCount, len(lines), sw.buf.String())
 	}
 }

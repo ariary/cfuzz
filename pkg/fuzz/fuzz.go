@@ -70,14 +70,16 @@ func cartesianProductPlusPlus(list1 [][]string, list2 []string) (product [][]str
 	return product
 }
 
-//PerformFuzzing: Exec specific crafted command for each wordlist file line read
+// PerformFuzzing executes the fuzz run over the configured wordlist(s).
+// Concurrency is limited to cfg.Threads goroutines via a semaphore channel.
 func PerformFuzzing(cfg Config) {
-	// read wordlist
-	if !cfg.Multiple { /////////KEEP THIS ITERATION IF SIMPLE (not multiple) => AVOID BROWSING THE WORDLIST TWICE
+	sem := make(chan struct{}, cfg.Threads)
+
+	if !cfg.Multiple {
 		var scanner *bufio.Scanner
-		if cfg.StdinWordlist { //wordlist from stdin
+		if cfg.StdinWordlist {
 			scanner = bufio.NewScanner(os.Stdin)
-		} else { //wordlist from filename
+		} else {
 			wordlist, err := os.Open(cfg.Wordlists[0])
 			if err != nil {
 				log.Fatal(err)
@@ -87,45 +89,44 @@ func PerformFuzzing(cfg Config) {
 		}
 
 		var wg sync.WaitGroup
-		// Caveat: Scanner will error with lines longer than 65536 characters. cf https://stackoverflow.com/questions/8757389/reading-a-file-line-by-line-in-go
 		for scanner.Scan() {
 			time.Sleep(time.Duration(cfg.RoutineDelay) * time.Millisecond)
+			word := scanner.Text()
+			sem <- struct{}{}
 			wg.Add(1)
-			substituteStr := scanner.Text()
-
-			go Exec(cfg, &wg, []string{substituteStr})
+			go func(w string) {
+				defer func() { <-sem }()
+				Exec(cfg, &wg, []string{w})
+			}(word)
 		}
-
 		wg.Wait()
 
 		if err := scanner.Err(); err != nil {
 			log.Fatal(err)
 		}
-	} else { //multiple
-		//construct lists of word containing in wordlist
+	} else {
 		var wordlists [][]string
-		for i := 0; i < len(cfg.Wordlists); i++ {
-			wordlists = append(wordlists, getLines(cfg.Wordlists[i]))
+		for _, wlPath := range cfg.Wordlists {
+			wordlists = append(wordlists, getLines(wlPath))
 		}
 
-		//Browse list
 		substitutes := cartesianProduct(wordlists[0], wordlists[1])
 		for i := 2; i < len(wordlists); i++ {
 			substitutes = cartesianProductPlusPlus(substitutes, wordlists[i])
-
 		}
 
 		var wg sync.WaitGroup
-
-		for i := 0; i < len(substitutes); i++ {
+		for _, subs := range substitutes {
+			subs := subs
+			sem <- struct{}{}
 			wg.Add(1)
-			go Exec(cfg, &wg, substitutes[i])
+			go func() {
+				defer func() { <-sem }()
+				Exec(cfg, &wg, subs)
+			}()
 		}
-
 		wg.Wait()
-
 	}
-
 }
 
 //Exec: exec the new command and send result to print function
