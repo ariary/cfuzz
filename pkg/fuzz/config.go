@@ -2,18 +2,23 @@ package fuzz
 
 import (
 	"errors"
-	"flag"
-	"fmt"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 )
 
-type wordlists []string
+// Wordlists is a slice of wordlist file paths with a String() method for formatting.
+type Wordlists []string
 
+// String returns a comma-separated string representation of the wordlists.
+func (w Wordlists) String() string {
+	return strings.Join(w, ",")
+}
+
+// Config holds all runtime configuration for a cfuzz run.
 type Config struct {
-	Wordlists     wordlists
+	Wordlists     Wordlists
 	Keyword       string
 	Command       string
 	RoutineDelay  int64
@@ -23,6 +28,13 @@ type Config struct {
 	StdinFuzzing  bool
 	Multiple      bool
 	StdinWordlist bool
+	Threads       int
+	AIFilter      string
+	OnlyWord      bool
+	// AIFilterFn is an optional callback that returns true if the result should be shown.
+	// Used to wire in AI filtering without importing pkg/ai from pkg/fuzz.
+	// When nil, no AI filtering is applied.
+	AIFilterFn    func(word, stdout, stderr, code string) bool
 	DisplayModes  []DisplayMode
 	FullDisplay   bool
 	HideBanner    bool
@@ -31,411 +43,147 @@ type Config struct {
 	ResultLogger  *log.Logger
 }
 
-var usage = `Usage of cfuzz: cfuzz [flags values] [command] or cfuzz [flags values] [command] with CFUZZ_CMD environment variable set
-Fuzz command line execution and filter results
-
-CONFIGURATION
-  -w, --wordlist              wordlist used by fuzzer
-  -d, --delay                 delay in ms between each thread launching. A thread executes the command. (default: 0)
-  -k, --keyword               keyword used to determine which zone to fuzz (default: FUZZ)
-  -s, --shell                 shell to use for execution (default: /bin/bash)
-  -to, --timeout              command execution timeout in s. After reaching it the command is killed. (default: 30)
-  -i, --input                 provide command stdin
-  -if, --stdin-fuzzing        fuzz sdtin instead of command line
-  -m, --spider                fuzz multiple keyword places. You must provide as many wordlists as keywords. Provide them in order you want them to be applied.
-  -sw, --stdin-wordlist       provide wordlist in cfuzz stdin
-
-DISPLAY
-  -oc, --stdout               display stdout number of characters
-  -ec, --stderr               display stderr number of characters
-  -t, --time                  display execution time
-  -c, --code                  display exit code
-  -Hb, --no-banner            do not display banner
-  -r, --only-word             only display words (from wordlist)
-  -f, --full-output           display full command execution output (can't be combined with others display mode)
-
-FILTER
-  -H, --hide                  only display results that don't pass the filters
-
- STDOUT:
-  -omin, --stdout-min         filter to only display if stdout characters number is lesser than n
-  -omax, --stdout-max         filter to only display if stdout characters number is greater than n
-  -oeq,  --stdout-equal       filter to only display if stdout characters number is equal to n
-  -ow,   --stdout-word        filter to only display if stdout cointains specific word
-
- STDERR:
-  -emin, --stderr-min         filter to only display if stderr characters number is lesser than n
-  -emax, --stderr-max         filter to only display if stderr characters number is greater than n
-  -eeq,  --stderr-equal       filter to only display if stderr characters number is equal to n
-  -ew,   --stderr-word        filter to only display if stderr cointains specific word
-
- TIME:
-  -tmin, --time-min           filter to only display if exectuion time is shorter than n seconds
-  -tmax, --time-max           filter to only display if exectuion time is longer than n seconds
-  -teq,  --time-equal         filter to only display if exectuion time is shorter than n seconds
-
- CODE:
-  --success                   filter to only display if execution return a zero exit code
-  --failure                   filter to only display if execution return a non-zero exit code
-
-  -h, --help                  prints help information 
-`
-
-func (i *wordlists) String() string {
-
-	return strings.Join(*i, ",")
-}
-
-func (i *wordlists) Set(value string) error {
-	*i = append(*i, value)
-	return nil
-}
-
-// NewConfig create Config instance
-func NewConfig() Config {
-	// default value
-	config := Config{Keyword: "FUZZ"}
-
-	//logger
-	// minwidth, tabwidth, padding, padchar, flags
-	config.ResultLogger = log.New(os.Stdout, "", 0)
-
-	// CONFIGURATION
-	// flag wordlist
-	flag.Var(&config.Wordlists, "wordlist", "wordlist used by fuzzer")
-	flag.Var(&config.Wordlists, "w", "wordlist used by fuzzer")
-
-	// flag keyword
-	flag.StringVar(&config.Keyword, "keyword", "FUZZ", "keyword use to determine which zone to fuzz")
-	flag.StringVar(&config.Keyword, "k", "FUZZ", "keyword use to determine which zone to fuzz")
-
-	// flag shell
-	flag.StringVar(&config.Shell, "shell", "/bin/bash", "shell to use for execution")
-	flag.StringVar(&config.Shell, "s", "/bin/bash", "shell to use for execution")
-
-	// flag RoutineDelay
-	flag.Int64Var(&config.RoutineDelay, "d", 0, "delay in ms between each thread launching. A thread execute the command. (default: 0)")
-	flag.Int64Var(&config.RoutineDelay, "delay", 0, "delay in ms between each thread launching. A thread execute the command. (default: 0)")
-
-	//flag timeout
-	flag.Int64Var(&config.Timeout, "to", 30, "Command execution timeout in s. After reaching it the command is killed. (default: 30)")
-	flag.Int64Var(&config.Timeout, "timeout", 30, "Command execution timeout in s. After reaching it the command is killed. (default: 30)")
-
-	// flag input
-	flag.StringVar(&config.Input, "input", "", "fuzz stdin")
-	flag.StringVar(&config.Input, "i", "", "fuzz stdin")
-
-	// flag stdin-fuzzing
-	flag.BoolVar(&config.StdinFuzzing, "stdin-fuzzing", false, "fuzz stdin")
-	flag.BoolVar(&config.StdinFuzzing, "if", false, "fuzz stdin")
-
-	// flag spider
-	flag.BoolVar(&config.Multiple, "spider", false, "fuzz multiple keyword")
-	flag.BoolVar(&config.Multiple, "m", false, "fuzz multiple keyword")
-
-	// flag stdin wordlist
-	flag.BoolVar(&config.StdinWordlist, "stdin-wordlist", false, "wordlist provided in stdin")
-	flag.BoolVar(&config.StdinWordlist, "sw", false, "wordlist provided in stdin")
-
-	// DISPLAY MODE
-
-	// flag hide banner
-	flag.BoolVar(&config.HideBanner, "Hb", false, "hide banner")
-	flag.BoolVar(&config.HideBanner, "no-banner", false, "hide banner")
-
-	// flag only word display
-	var noDisplay bool
-	flag.BoolVar(&noDisplay, "r", false, "print only word")
-	flag.BoolVar(&noDisplay, "only-word", false, "print only word")
-
-	// flag hide
-	flag.BoolVar(&config.Hide, "H", false, "hide fields that pass the filter")
-	flag.BoolVar(&config.Hide, "hide", false, "hide fields that pass the filter")
-
-	var stdoutDisplay bool
-	flag.BoolVar(&stdoutDisplay, "oc", false, "display command execution  number of characters in stdout.")
-	flag.BoolVar(&stdoutDisplay, "stdout-characters", false, "display execution command number of characters in stdout.")
-
-	var stderrDisplay bool
-	flag.BoolVar(&stderrDisplay, "ec", false, "display command execution  number of characters in stderr.")
-	flag.BoolVar(&stderrDisplay, "stderr-characters", false, "display execution command number of characters in stderr.")
-
-	var timeDisplay bool
-	flag.BoolVar(&timeDisplay, "t", false, "display command execution  time.")
-	flag.BoolVar(&timeDisplay, "time", false, "display command execution time.")
-
-	var codeDisplay bool
-	flag.BoolVar(&codeDisplay, "c", false, "display command execution exit code.")
-	flag.BoolVar(&codeDisplay, "code", false, "display command execution exit code.")
-
-	flag.BoolVar(&config.FullDisplay, "f", false, "display full command execution output")
-	flag.BoolVar(&config.FullDisplay, "full-output", false, "display full command execution output")
-
-	// FILTERS
-	var success, failure bool
-	flag.BoolVar(&success, "success", false, "filter to display only command with exit code 0.")
-	flag.BoolVar(&failure, "failure", false, "filter to display only command with a non-zero exit .")
-
-	parseFilters(&config)
-
-	flag.Usage = func() { fmt.Print(usage) }
-	flag.Parse()
-
-	parseSpecialFilters(&config, success, failure) //success and failure need flags to be parse before
-
-	// command
-	if cmdEnv := os.Getenv("CFUZZ_CMD"); cmdEnv != "" {
-		config.Command = cmdEnv
-	} else if flag.NArg() > 0 {
-		cmdArg := strings.Join(flag.Args(), " ")
-		config.Command = cmdArg
+// DefaultConfig returns a Config with sensible defaults and a stdout logger.
+func DefaultConfig() Config {
+	return Config{
+		Keyword:      "FUZZ",
+		Shell:        "/bin/bash",
+		Timeout:      30,
+		Threads:      50,
+		ResultLogger: log.New(os.Stdout, "", 0),
 	}
-
-	// parse display mode
-	if !noDisplay {
-		config.DisplayModes = parseDisplayMode(&config, stdoutDisplay, stderrDisplay, timeDisplay, codeDisplay)
-	}
-
-	return config
 }
 
-//CheckConfig: assert that all required fields are present in config, and are adequate to cfuzz run
+// CheckConfig validates that all required fields are present and consistent.
 func (c *Config) CheckConfig() error {
 	if len(c.Wordlists) == 0 && !c.StdinWordlist {
-		return errors.New("No wordlist provided. Please indicate a wordlist to use for fuzzing (-w,--wordlist) or provide it trough stdin (--stdin-wordlist)")
+		return errors.New("no wordlist provided: use -w/--wordlist or --stdin-wordlist")
 	}
 	if len(c.Wordlists) != 0 && c.StdinWordlist {
-		return errors.New("-w/--wordlist can't be used with -sw/--stdin-wordlist flag")
+		return errors.New("-w/--wordlist cannot be combined with --stdin-wordlist")
 	}
-
 	if c.Keyword == "" {
-		return errors.New("Fuzzing Keyword can't be empty string")
+		return errors.New("fuzzing keyword cannot be empty")
 	}
 	if c.Command == "" {
-		return errors.New("No command provided. Please indicate it using environment variable CFUZZ_CMD or cfuzz [flag:value] [command]")
+		return errors.New("no command provided: set CFUZZ_CMD or pass command as argument")
 	}
-
-	//--spider & --stdin-wordlist incompatible
 	if c.Multiple && c.StdinWordlist {
-		return errors.New("--spider can't be used with -sw/--stdin-wordlist flag")
+		return errors.New("--spider cannot be combined with --stdin-wordlist")
 	}
-
 	if c.Multiple && len(c.Wordlists) < 2 {
-		return errors.New("Only 1 wordlist has been provided with multiple wordlists/keyword mode (-m/--spider). use this option only with several wordlists")
-	} else if !c.Multiple && len(c.Wordlists) > 1 {
-		return errors.New("Several wordlists have been submitted. Please use -m flag to use more than one wordlist/keyword")
+		return errors.New("--spider requires at least 2 wordlists")
 	}
-
+	if !c.Multiple && len(c.Wordlists) > 1 {
+		return errors.New("multiple wordlists provided without --spider")
+	}
 	if c.FullDisplay && len(c.DisplayModes) > 0 {
-		return errors.New("-f/full-output can't be used with other display mode:" + c.DisplayModes[0].Name()) //only give the first one for example
+		return errors.New("--full-output cannot be combined with other display modes: " + c.DisplayModes[0].Name())
 	}
-	// check field consistency
-	err := checkKeywordsPresence(c)
-
-	return err
+	return checkKeywordsPresence(c)
 }
 
-//checkKeywordsPresence: check the consistency between flag and keyword presence (ie Keyword is present in stdin or command and if --spider check
-//there are as many keyword than wordlist)
 func checkKeywordsPresence(c *Config) error {
 	if c.StdinFuzzing {
-		if c.Multiple { //stdin + multiple
-			keywordNum := strings.Count(c.Input+c.Command, c.Keyword)
-			if keywordNum != len(c.Wordlists) {
-				return errors.New("Please provide as many wordlists as keyword. keyword:" + c.Keyword + " input:" + c.Input + "  command:" + c.Command + "wordlist number:" + strconv.Itoa(len(c.Wordlists)))
+		if c.Multiple {
+			n := strings.Count(c.Input+c.Command, c.Keyword)
+			if n != len(c.Wordlists) {
+				return errors.New("keyword count (" + strconv.Itoa(n) + ") must match wordlist count (" + strconv.Itoa(len(c.Wordlists)) + ")")
 			}
-		} else if !strings.Contains(c.Input, c.Keyword) { //stdin simple
-			return errors.New("Fuzzing keyword has not been found in stdin. keyword:" + c.Keyword + " input:" + c.Input)
-		} else {
-			return nil
+		} else if !strings.Contains(c.Input, c.Keyword) {
+			return errors.New("keyword " + c.Keyword + " not found in stdin input: " + c.Input)
 		}
-	} else if c.Multiple { // multiple w/o stdin
-		keywordNum := strings.Count(c.Command, c.Keyword)
-		if keywordNum != len(c.Wordlists) {
-			return errors.New("Please provide as many wordlists as keyword. keyword:" + c.Keyword + "  command:" + c.Command + "wordlist number:" + strconv.Itoa(len(c.Wordlists)))
+	} else if c.Multiple {
+		n := strings.Count(c.Command, c.Keyword)
+		if n != len(c.Wordlists) {
+			return errors.New("keyword count (" + strconv.Itoa(n) + ") must match wordlist count (" + strconv.Itoa(len(c.Wordlists)) + ")")
 		}
-	} else if !strings.Contains(c.Command, c.Keyword) { //simple w/o stdin
-		return errors.New("Fuzzing keyword has not been found in command. keyword:" + c.Keyword + " command:" + c.Command)
+	} else if !strings.Contains(c.Command, c.Keyword) {
+		return errors.New("keyword " + c.Keyword + " not found in command: " + c.Command)
 	}
 	return nil
 }
 
-//parseDisplayMode: Return array of display mode interface chosen with flags. If none, default is stdout characters display mode
-func parseDisplayMode(c *Config, stdout bool, stderr bool, time bool, code bool) (modes []DisplayMode) {
+// BuildDisplayModes returns the display mode slice from parsed flag values.
+// When fullDisplay is true, returns nil (PrintExec handles full display separately).
+// When no flags are set, defaults to stdout character count.
+func BuildDisplayModes(stdout, stderr, showTime, code, fullDisplay bool) []DisplayMode {
+	if fullDisplay {
+		return nil
+	}
+	var modes []DisplayMode
 	if stdout {
 		modes = append(modes, StdoutDisplay{})
 	}
 	if stderr {
 		modes = append(modes, StderrDisplay{})
 	}
-	if time {
+	if showTime {
 		modes = append(modes, TimeDisplay{})
 	}
 	if code {
 		modes = append(modes, CodeDisplay{})
 	}
-
-	//default, if none && not full display
-	if !c.FullDisplay {
-		if len(modes) == 0 {
-			stdoutDisplay := StdoutDisplay{}
-			modes = []DisplayMode{stdoutDisplay}
-		}
+	if len(modes) == 0 {
+		modes = []DisplayMode{StdoutDisplay{}}
 	}
-
 	return modes
 }
 
-// parseFilters: parse all flags and determine the filters, add them in the config struct given in parameter
-func parseFilters(config *Config) {
-	// stdout filters
-	maxS := []string{"omax", "stdout-max"}
-	for i := 0; i < len(maxS); i++ {
-		flag.Func(maxS[i], "filter to display only results with less than n characters", func(max string) error {
-			n, err := strconv.Atoi(max)
-			if err != nil {
-				return err
-			}
-			filter := StdoutMaxFilter{Max: n}
-			config.Filters = append(config.Filters, filter)
-			return nil
-		})
+// BuildFilters returns the filter slice from parsed flag values.
+// Use -1 as sentinel for "not set" on all int parameters.
+func BuildFilters(
+	stdoutMin, stdoutMax, stdoutEq int,
+	stdoutWords []string,
+	stderrMin, stderrMax, stderrEq int,
+	stderrWords []string,
+	timeMin, timeMax, timeEq int,
+	success, failure bool,
+) []Filter {
+	var filters []Filter
+
+	if stdoutMin >= 0 {
+		filters = append(filters, StdoutMinFilter{Min: stdoutMin})
+	}
+	if stdoutMax >= 0 {
+		filters = append(filters, StdoutMaxFilter{Max: stdoutMax})
+	}
+	if stdoutEq >= 0 {
+		filters = append(filters, StdoutEqFilter{Eq: stdoutEq})
+	}
+	for _, w := range stdoutWords {
+		filters = append(filters, StdoutWordFilter{TargetWord: w})
 	}
 
-	minS := []string{"omin", "stdout-min"}
-	for i := 0; i < len(minS); i++ {
-		flag.Func(minS[i], "filter to display only results with more than n characters", func(min string) error {
-			n, err := strconv.Atoi(min)
-			if err != nil {
-				return err
-			}
-			filter := StdoutMinFilter{Min: n}
-			config.Filters = append(config.Filters, filter)
-			return nil
-		})
+	if stderrMin >= 0 {
+		filters = append(filters, StderrMinFilter{Min: stderrMin})
+	}
+	if stderrMax >= 0 {
+		filters = append(filters, StderrMaxFilter{Max: stderrMax})
+	}
+	if stderrEq >= 0 {
+		filters = append(filters, StderrEqFilter{Eq: stderrEq})
+	}
+	for _, w := range stderrWords {
+		filters = append(filters, StderrWordFilter{TargetWord: w})
 	}
 
-	eqS := []string{"oeq", "stdout-equal"}
-	for i := 0; i < len(eqS); i++ {
-		flag.Func(eqS[i], "filter to display only results with exactly n characters", func(eq string) error {
-			n, err := strconv.Atoi(eq)
-			if err != nil {
-				return err
-			}
-			filter := StdoutEqFilter{Eq: n}
-			config.Filters = append(config.Filters, filter)
-			return nil
-		})
+	if timeMin >= 0 {
+		filters = append(filters, TimeMinFilter{Min: timeMin})
+	}
+	if timeMax >= 0 {
+		filters = append(filters, TimeMaxFilter{Max: timeMax})
+	}
+	if timeEq >= 0 {
+		filters = append(filters, TimeEqFilter{Eq: timeEq})
 	}
 
-	wordS := []string{"ow", "stdout-word"}
-	for i := 0; i < len(wordS); i++ {
-		flag.Func(wordS[i], "filter to display only results cointaing specific in stdout", func(word string) error {
-			filter := StdoutWordFilter{TargetWord: word}
-			config.Filters = append(config.Filters, filter)
-			return nil
-		})
-	}
-
-	// stderr filters
-	emaxS := []string{"emax", "stderr-max"}
-	for i := 0; i < len(emaxS); i++ {
-		flag.Func(emaxS[i], "filter to display only results with less than n characters", func(max string) error {
-			n, err := strconv.Atoi(max)
-			if err != nil {
-				return err
-			}
-			filter := StderrMaxFilter{Max: n}
-			config.Filters = append(config.Filters, filter)
-			return nil
-		})
-	}
-
-	eminS := []string{"emin", "stderr-min"}
-	for i := 0; i < len(emaxS); i++ {
-		flag.Func(eminS[i], "filter to display only results with more than n characters", func(min string) error {
-			n, err := strconv.Atoi(min)
-			if err != nil {
-				return err
-			}
-			filter := StderrMinFilter{Min: n}
-			config.Filters = append(config.Filters, filter)
-			return nil
-		})
-	}
-
-	eeqS := []string{"eeq", "stderr-equal"}
-	for i := 0; i < len(eeqS); i++ {
-		flag.Func(eeqS[i], "filter to display only results with exactly n characters", func(eq string) error {
-			n, err := strconv.Atoi(eq)
-			if err != nil {
-				return err
-			}
-			filter := StderrEqFilter{Eq: n}
-			config.Filters = append(config.Filters, filter)
-			return nil
-		})
-	}
-
-	ewordS := []string{"ew", "stderr-word"}
-	for i := 0; i < len(ewordS); i++ {
-		flag.Func(ewordS[i], "filter to display only results cointaing specific in stderr", func(word string) error {
-			filter := StderrWordFilter{TargetWord: word}
-			config.Filters = append(config.Filters, filter)
-			return nil
-		})
-	}
-
-	// time filters
-	tmaxS := []string{"tmax", "time-max"}
-	for i := 0; i < len(tmaxS); i++ {
-		flag.Func(tmaxS[i], "filter to display only results with a time lesser than n seconds", func(max string) error {
-			n, err := strconv.Atoi(max)
-			if err != nil {
-				return err
-			}
-			filter := TimeMaxFilter{Max: n}
-			config.Filters = append(config.Filters, filter)
-			return nil
-		})
-	}
-
-	tminS := []string{"tmin", "time-min"}
-	for i := 0; i < len(tminS); i++ {
-		flag.Func(tminS[i], "filter to display only results with a time greater than n seconds", func(min string) error {
-			n, err := strconv.Atoi(min)
-			if err != nil {
-				return err
-			}
-			filter := TimeMinFilter{Min: n}
-			config.Filters = append(config.Filters, filter)
-			return nil
-		})
-	}
-
-	teqS := []string{"teq", "time-equal"}
-	for i := 0; i < len(teqS); i++ {
-		flag.Func(teqS[i], "filter to  display only results with a time equal to n seconds", func(eq string) error {
-			n, err := strconv.Atoi(eq)
-			if err != nil {
-				return err
-			}
-			filter := TimeEqFilter{Eq: n}
-			config.Filters = append(config.Filters, filter)
-			return nil
-		})
-	}
-
-}
-
-// parseSpecialFilters: parse success and failure flags that need to flag be parsed before
-func parseSpecialFilters(config *Config, success bool, failure bool) {
 	if success {
-		filter := CodeSuccessFilter{Zero: true}
-		config.Filters = append(config.Filters, filter)
+		filters = append(filters, CodeSuccessFilter{Zero: true})
 	}
 	if failure {
-		filter := CodeSuccessFilter{Zero: false}
-		config.Filters = append(config.Filters, filter)
+		filters = append(filters, CodeSuccessFilter{Zero: false})
 	}
+
+	return filters
 }
