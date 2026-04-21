@@ -67,7 +67,7 @@ func TestPerformFuzzing_ProcessesAllWords(t *testing.T) {
 	defer os.Remove(tmp.Name())
 
 	const wordCount = 20
-	for i := 0; i < wordCount; i++ {
+	for i := range wordCount {
 		fmt.Fprintf(tmp, "word%d\n", i)
 	}
 	tmp.Close()

@@ -164,7 +164,6 @@ func PerformFuzzing(cfg Config) {
 		var doneCount atomic.Int64
 
 		for _, subs := range substitutes {
-			subs := subs
 			sem <- struct{}{}
 			wg.Add(1)
 			go func() {
