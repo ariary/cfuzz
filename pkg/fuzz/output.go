@@ -43,7 +43,7 @@ func PrintConfig(cfg Config) {
 	fmt.Println()
 	PrintLine(cfg, "command fuzzed:", cfg.Command)
 	if len(cfg.Wordlists) != 0 {
-		PrintLine(cfg, "wordlist:", cfg.Wordlists.String())
+		PrintLine(cfg, "wordlist:", strings.Join(cfg.Wordlists, ","))
 	} else if cfg.StdinWordlist {
 		PrintLine(cfg, "wordlist:", "from stdin")
 	}
@@ -72,11 +72,13 @@ func PrintLine(cfg Config, value string, element ...string) {
 	// // minwidth, tabwidth, padding, padchar, flags
 	tabwriter.Init(&strBuilder, 40, 8, 0, '\t', 0)
 
-	line := value
-	for i := 0; i < len(element); i++ {
-		line += "\t" + element[i]
+	var sb strings.Builder
+	sb.WriteString(value)
+	for _, e := range element {
+		sb.WriteString("\t")
+		sb.WriteString(e)
 	}
-	fmt.Fprintf(tabwriter, "%s", line) //write into tab -> write into string builder
+	fmt.Fprintf(tabwriter, "%s", sb.String()) //write into tab -> write into string builder
 
 	tabwriter.Flush() // Flush before calling String()
 	cfg.ResultLogger.Println(strBuilder.String())
